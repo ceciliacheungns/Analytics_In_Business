@@ -144,6 +144,8 @@ ggplot(na.omit(cosine.order), aes(x = reorder(factor(id), Average), y = Average,
 cosine.table <- cosine.order[, c("id","Average","Z.score")]
 panderOptions("digits", 3)
 pander(cosine.table)
+
+### write.csv(cosine.order, file = "cosine.csv")
 ```
 
 ### notes
