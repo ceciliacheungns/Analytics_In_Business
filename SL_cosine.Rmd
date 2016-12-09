@@ -1,0 +1,151 @@
+---
+title: "ainb_group"
+author: "Steven Locorotondo"
+date: "12/8/2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(reshape2)
+library(lsa)
+library(ggplot2)
+library(pander)
+```
+
+```{r echo=FALSE}
+# load data
+picks.data <- read.csv("peoplepickinganonymised.csv")
+```
+
+```{r echo=FALSE}
+# a bit of exploratory analysis
+
+sequence <- c(0,60,120,240)
+count <- 0
+
+for (i in 1:60) {
+  count <- 1
+  for (j in sequence) {
+    assign(paste("candidate", i, count , sep=""), picks.data[, 3+i+j])
+    count <- count + 1
+  }
+  
+}
+
+#paste("id",1,sep = '')
+
+```
+
+```{r echo=FALSE}
+# cosine similarity
+
+# first create an empty matrix that will be populated with the cosine similarity results
+mat.cosine <- matrix(0, 60, 5)
+mat.cosine2 <- matrix(0, 60, 5)
+
+# subset data to only include the picks
+sub.data <- picks.data[, 4:length(picks.data)]
+
+# calculate cosine similarity and populate matrix
+for (id in 1:nrow(sub.data)) {
+  
+  # extract all the vectors needed to calculate the cosine similarities
+  friend <- as.numeric(sub.data[id, 1:60])   # skip the influence picks
+  creativity <- as.numeric(sub.data[id, 121:180])
+  influence <- as.numeric(sub.data[id, 181:240])
+  implementation <- as.numeric(sub.data[id, 241:300])
+  
+  # populate cosine matrix
+  mat.cosine[id,2] <- cosine(friend, friend)
+  mat.cosine[id,3] <- cosine(friend, creativity)
+  mat.cosine[id,4] <- cosine(friend, influence)
+  mat.cosine[id,5] <- cosine(friend, implementation)
+}
+
+# manual calculation for cosine similarity
+cosine.sim <- function(x,y) {
+  x %*% y / sqrt(x%*%x * y%*%y)
+}
+
+# check if results are the same using built function
+for (id in 1:nrow(sub.data)) {
+  
+  # extract all the vectors needed to calculate the cosine similarities
+  friend <- as.numeric(sub.data[id, 1:60])   # skip the influence picks
+  creativity <- as.numeric(sub.data[id, 121:180])
+  influence <- as.numeric(sub.data[id, 181:240])
+  implementation <- as.numeric(sub.data[id, 241:300])
+  
+  # populate cosine matrix
+  mat.cosine2[id,2] <- cosine.sim(friend, friend)
+  mat.cosine2[id,3] <- cosine.sim(friend, creativity)
+  mat.cosine2[id,4] <- cosine.sim(friend, influence)
+  mat.cosine2[id,5] <- cosine.sim(friend, implementation)
+}
+
+# mat.cosine == mat.cosine2, returns TRUE
+
+# calculate the mean cosine similarity for each ID, without Friend_Friend column
+means <- rowMeans(mat.cosine[,3:5])
+
+# combine means to cosine matrix
+mat.cosineM <- cbind(mat.cosine, means)
+
+# convert to dataframe, add column names, populate ID column
+data.cosine <- data.frame(mat.cosineM)
+
+names <- c("id", "Friend_Friend", "Friend_Creativity", "Friend_Influence", "Friend_Implementation", "Average")
+colnames(data.cosine) <- names
+
+data.cosine$id <- 1:60
+
+# order "average" decreasing
+cosine.order <- data.cosine[order(-data.cosine$Average),]
+
+# z-score function
+z.score <- function(x, mean, sd) {
+  (x - mean) / sd
+}
+
+# mean of cosine scores
+mean.cosine <- mean(cosine.order$Average, na.rm = TRUE)
+
+# sd of cosine scores
+sd.cosine <- sd(cosine.order$Average, na.rm = TRUE)
+
+# apply z-score function to calculate z-score
+cosine.order$Z.score <- sapply(cosine.order$Average, z.score, mean = mean.cosine,sd=sd.cosine)
+```
+
+```{r echo=FALSE, fig.width = 10, fig.align = "center"}
+# create bins in cosine.order
+cosine.order$bin <- cut(cosine.order$Average, breaks = 5, labels = c("(0,0.2]","(0.2,0.4]", "(0.4,0.6]","(0.6,0.8]","(0.8,1]"))
+
+# plot histogram of average cosine similarities
+ggplot(na.omit(cosine.order), aes(bin, fill = bin)) +
+  geom_bar() +
+  labs(x = "Cosine Similarity", y = "Count", title = "Average Cosine Similarity Frequency") +
+  scale_fill_brewer(palette = "Blues",direction = -1, guide=FALSE)
+```
+
+The graph above shows the average cosine similarity for each ID. As can be seen, over 20 IDs display a high level of flexibility in picking teams for different tasks. The average cosine similarity was calculated using each IDs social picks as benchmark. These picks were then compared to each IDs picks for different tasks. Three IDs have an average cosine similarity of 1, indicating very low levels of flexibility. 
+
+```{r echo=FALSE, fig.width = 10, fig.align = "center", fig.height=8}
+# plot each IDs average cosine score
+ggplot(na.omit(cosine.order), aes(x = reorder(factor(id), Average), y = Average, fill = Average)) +
+  geom_bar(stat="identity") +
+  coord_flip() +
+  labs(x = "ID", y = "Average Cosine Similarity", title = "Average Cosine Similarity by ID") +
+  scale_fill_distiller(palette = "Blues", guide=FALSE, direction = 1)
+```
+
+```{r echo=FALSE, fig.align="center"}
+# subset cosine table to only include ID, average, z-score
+cosine.table <- cosine.order[, c("id","Average","Z.score")]
+panderOptions("digits", 3)
+pander(cosine.table)
+```
+
+### notes
+- create histogram to show the distribution of average cosine sim
+
