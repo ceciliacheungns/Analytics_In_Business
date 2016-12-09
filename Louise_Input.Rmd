@@ -1,0 +1,39 @@
+---
+title: "Group Project"
+author: "Louise Fallon"
+date: "6 December 2016"
+output: html_document
+---
+
+```{r}
+library(igraph)
+```
+
+```{r}
+fulldata <- read.csv("peoplepickinganonymised.csv")
+```
+
+```{r}
+formatrix <- fulldata[,4:63]
+matrix <- as.matrix(formatrix)
+```
+
+```{r}
+G <- graph_from_adjacency_matrix(matrix, mode = "directed",add.colnames = TRUE, diag=FALSE)
+```
+
+```{r}
+coords <- layout_(G, nicely())
+plot(G, vertex.size=12, edge.arrow.size=0.2)
+```
+
+
+```{r}
+coords <- layout_(G, nicely())
+plot(G, layout = layout_randomly, vertex.size=12, edge.arrow.size=0.2)
+```
+
+```{r}
+l <- layout_on_sphere(G)
+plot(G, layout=l, vertex.size=15, edge.arrow.size=0.2, edge.width=0.2)
+```
