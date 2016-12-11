@@ -7,6 +7,9 @@ output: html_document
 
 ```{r}
 library(igraph)
+library(knitr)
+library(xlsx)
+
 ```
 
 ```{r}
@@ -14,26 +17,386 @@ fulldata <- read.csv("peoplepickinganonymised.csv")
 ```
 
 ```{r}
-formatrix <- fulldata[,4:63]
-matrix <- as.matrix(formatrix)
+dffrmatrix <- fulldata[,4:63]
+frmatrix <- as.matrix(dffrmatrix)
 ```
 
 ```{r}
-G <- graph_from_adjacency_matrix(matrix, mode = "directed",add.colnames = TRUE, diag=FALSE)
+G <- graph_from_adjacency_matrix(frmatrix, mode = "directed",add.colnames = TRUE, diag=FALSE)
 ```
 
+#Plotting
+
+basic plot with R 
 ```{r}
 coords <- layout_(G, nicely())
 plot(G, vertex.size=12, edge.arrow.size=0.2)
 ```
 
+Plot with some more parameters
 
 ```{r}
-coords <- layout_(G, nicely())
-plot(G, layout = layout_randomly, vertex.size=12, edge.arrow.size=0.2)
+plot(G, vertex.size=15, edge.arrow.size=0.2, edge.width=0.2, vertex.label.cex=0.42, vertex.label.color="white", vertex.color="darkblue",
+     vertex.label.family="Helvetica")
 ```
+
+Random layout
+
+```{r}
+plot(G, layout = layout_randomly, vertex.size=15, edge.arrow.size=0.2, edge.width=0.2, vertex.label.cex=0.42, vertex.label.color="white", vertex.color="darkblue",
+     vertex.label.family="Helvetica")
+```
+
+Sphere layout
 
 ```{r}
 l <- layout_on_sphere(G)
-plot(G, layout=l, vertex.size=15, edge.arrow.size=0.2, edge.width=0.2)
+plot(G, layout=l, vertex.size=15, edge.arrow.size=0.2, edge.width=0.2, vertex.label.cex=0.42, vertex.label.color="white", vertex.color="darkblue",
+     vertex.label.family="Helvetica")
 ```
+
+Kamada-Kawai layout (quite nice I think)
+
+```{r}
+l <- layout_with_kk(G)
+plot(G, layout=l, vertex.size=15, edge.arrow.size=0.2, edge.width=0.2, vertex.label.cex=0.42, vertex.label.color="white", vertex.color="darkblue",
+     vertex.label.family="Helvetica")
+```
+
+
+Fruchterman Reingold layout (best for displaying communities and cliques)
+
+```{r}
+l <-layout.fruchterman.reingold(G)
+plot(G, layout=l, vertex.size=15, edge.arrow.size=0.2, edge.width=0.2, vertex.label.cex=0.42, vertex.label.color="white", vertex.color="darkblue",
+     vertex.label.family="Helvetica")
+```
+
+
+# Communities
+
+```{r}
+com <- cluster_spinglass(G, spin=5)
+V(G)$color <- com$membership+1
+G <- set_graph_attr(G, "layout", layout.fruchterman.reingold(G))
+plot(G, vertex.size=15, edge.arrow.size=0.2, edge.width=0.2, vertex.label.cex=0.42, vertex.label.color="white", vertex.label.family="Helvetica")
+```
+
+```{r}
+com <- cluster_edge_betweenness(G)
+V(G)$color <- com$membership+1
+G <- set_graph_attr(G, "layout", layout.fruchterman.reingold(G))
+plot(G, vertex.size=15, edge.arrow.size=0.2, edge.width=0.2, vertex.label.cex=0.42, vertex.label.color="white", vertex.label.family="Helvetica")
+```
+
+```{r}
+com <- cluster_leading_eigen(G)
+V(G)$color <- com$membership+1
+G <- set_graph_attr(G, "layout", layout.fruchterman.reingold(G))
+plot(G, vertex.size=15, edge.arrow.size=0.2, edge.width=0.2, vertex.label.cex=0.42, vertex.label.color="white", vertex.label.family="Helvetica")
+```
+
+```{r}
+com <- cluster_walktrap(G)
+V(G)$color <- com$membership+1
+G <- set_graph_attr(G, "layout", layout.fruchterman.reingold(G))
+plot(G, vertex.size=15, edge.arrow.size=0.2, edge.width=0.2, vertex.label.cex=0.42, vertex.label.color="white", vertex.label.family="Helvetica")
+```
+
+Fast Greedy clustering (treats as undirected)
+```{r}
+cfg <- cluster_fast_greedy(as.undirected(G))
+
+plot(cfg, as.undirected(G), vertex.size=15, edge.arrow.size=0.2, edge.width=0.2, vertex.label.cex=0.42, vertex.label.family="Helvetica")
+```
+
+
+```{r}
+com <- cluster_infomap(G)
+V(G)$color <- com$membership+1
+G <- set_graph_attr(G, "layout", layout.fruchterman.reingold(G))
+plot(G, vertex.size=15, edge.arrow.size=0.2, edge.width=0.2, vertex.label.cex=0.42, vertex.label.color="white", vertex.label.family="Helvetica")
+```
+
+##Cliques
+
+```{r warning=FALSE}
+G.cli <- cliques(G, min = 5, max = NULL)
+
+# Set subgraph members
+clique1 <- as.vector(G.cli[[1]])
+clique2 <- as.vector(G.cli[[2]])
+clique3 <- as.vector(G.cli[[3]])
+clique4 <- as.vector(G.cli[[4]])
+
+# Add edge attribute id values
+E(G)$id <- seq(ecount(G))
+
+# Extract supgraph
+sg.c1 <- induced.subgraph(graph=G,vids=clique1)
+sg.c1.Id <- E(sg.c1)$id
+sg.c2 <- induced.subgraph(graph=G,vids=clique2)
+sg.c2.Id <- E(sg.c2)$id
+sg.c3 <- induced.subgraph(graph=G,vids=clique3)
+sg.c3.Id <- E(sg.c3)$id
+sg.c4 <- induced.subgraph(graph=G,vids=clique4)
+sg.c4.Id <- E(sg.c4)$id
+
+# Set graph and subgraph edge and node colors and sizes
+E(G)$color="grey"
+V(G)$color="darkgray" 
+V(G)$label.color="white"
+E(G)[sg.c1.Id]$color <- "green"
+V(G)[clique1]$color <- "green"
+E(G)[sg.c2.Id]$color <- "red"
+V(G)[clique2]$color <- "red"
+E(G)[sg.c3.Id]$color <- "orange"
+V(G)[clique3]$color <- "orange"
+E(G)[sg.c4.Id]$color <- "blue"
+V(G)[clique4]$color <- "blue"
+# Set seed value
+set.seed(40041)
+
+# Set layout options
+l <- layout.fruchterman.reingold(G)
+
+# Plot graph and subgraph
+plot.igraph(x=G,layout=l, vertex.size=15, edge.arrow.size=0.2, edge.width=0.2, vertex.label.cex=0.42, vertex.label.family="Helvetica")
+
+#Reset graph parameters
+E(G)$color="grey"
+V(G)$color="darkblue" 
+```
+
+We can see for the 4 largest cliques (of size 5), the orange and red clique are overlapping (node 54 is in red but not orange, and node 55 is in orange but not red).
+
+```{r echo=FALSE}
+cluster <- c("green","yellow","yellow","blue")
+clique <- c("green","red","orange","blue")
+clustertoclique <- data.frame(cluster=cluster, clique=clique)
+kable(clustertoclique)
+```
+
+# Other Questions
+
+Plot for friend graph with size = in degree.
+
+```{r}
+set.seed(48)
+layoutfr <- layout.fruchterman.reingold(G)
+```
+
+```{r}
+G.degree <- degree(G, mode="in")
+G <- set_graph_attr(G, "layout", layoutfr)
+plot(G, vertex.size=G.degree*2, edge.arrow.size=0.2, edge.width=0.2, vertex.label.cex=0.42, vertex.label.color="white", vertex.label.family="Helvetica")
+```
+
+Advice Graph 
+
+```{r echo=FALSE}
+dfadvmatrix <- fulldata[,64:123]
+advmatrix <- as.matrix(dfadvmatrix)
+```
+
+```{r echo=FALSE}
+G.adv <- graph_from_adjacency_matrix(advmatrix, mode = "directed",add.colnames = TRUE, diag=FALSE)
+```
+
+```{r echo=FALSE}
+G.adv.degree <- degree(G.adv, mode="in")
+G.adv <- set_graph_attr(G.adv, "layout", layoutfr)
+plot(G.adv, vertex.size=G.adv.degree*2, edge.arrow.size=0.2, edge.width=0.2, vertex.label.cex=0.42, vertex.color="darkblue", vertex.label.color="white", vertex.label.family="Helvetica")
+```
+
+Creative Graph 
+```{r echo=FALSE}
+dfcrmatrix <- fulldata[,124:183]
+crmatrix <- as.matrix(dfcrmatrix)
+```
+
+```{r echo=FALSE}
+G.cr <- graph_from_adjacency_matrix(crmatrix, mode = "directed",add.colnames = TRUE, diag=FALSE)
+```
+
+```{r echo=FALSE}
+G.cr.degree <- degree(G.cr, mode="in")
+G.cr <- set_graph_attr(G.cr, "layout", layoutfr)
+plot(G.cr, vertex.size=G.cr.degree*2, edge.arrow.size=0.2, edge.width=0.2, vertex.label.cex=0.42, vertex.color="darkblue", vertex.label.color="white", vertex.label.family="Helvetica")
+```
+
+Implementation Graph 
+
+```{r echo=FALSE}
+dfimpmatrix <- fulldata[,184:243]
+impmatrix <- as.matrix(dfimpmatrix)
+```
+
+```{r echo=FALSE}
+G.imp <- graph_from_adjacency_matrix(impmatrix, mode = "directed",add.colnames = TRUE, diag=FALSE)
+```
+
+```{r echo=FALSE}
+G.imp.degree <- degree(G.imp, mode="in")
+G.imp <- set_graph_attr(G.imp, "layout", layoutfr)
+plot(G.imp, vertex.size=G.imp.degree*2, edge.arrow.size=0.2, edge.width=0.2, vertex.label.cex=0.42, vertex.color="darkblue", vertex.label.color="white", vertex.label.family="Helvetica")
+```
+
+Influence  Graph 
+
+```{r echo=FALSE}
+dfinflmatrix <- fulldata[,244:303]
+inflmatrix <- as.matrix(dfinflmatrix)
+```
+
+```{r echo=FALSE}
+G.infl <- graph_from_adjacency_matrix(inflmatrix, mode = "directed",add.colnames = TRUE, diag=FALSE)
+```
+
+```{r echo=FALSE}
+G.infl.degree <- degree(G.infl, mode="in")
+G.infl <- set_graph_attr(G.infl, "layout", layoutfr)
+plot(G.infl, vertex.size=G.infl.degree*2, edge.arrow.size=0.2, edge.width=0.2, vertex.label.cex=0.42, vertex.color="darkblue", vertex.label.color="white", vertex.label.family="Helvetica")
+```
+
+# Network Measures
+
+The most basic set of measures would be the in degree for each of the relevant questions.
+
+Below is a table with the **ranking** of nodes by in degree for each of the questions.
+
+```{r}
+indegreetable <- data.frame(
+          friendship    =order(G.degree, decreasing = TRUE),
+          advice        =order(G.adv.degree, decreasing = TRUE),
+          creativity    =order(G.cr.degree, decreasing = TRUE),
+          influence     =order(G.infl.degree, decreasing = TRUE),
+          implementation=order(G.imp.degree, decreasing = TRUE))
+kable(indegreetable)
+```
+
+
+Focusing on the three main questions, and to trade this off against "cost", we simply divide by the in-degree of the friendship question. Below are the rankings that occur after this transformation. We can see that #27 is at the top, because this node had an in degree of 0 for the friendship question. To remove this anomaly we set the in degree artificially to 0.5.
+
+```{r}
+G.degree[27] <- 0.5
+indegreetable <- data.frame(
+          creativity    =order(G.cr.degree/G.degree, decreasing = TRUE),
+          influence     =order(G.infl.degree/G.degree, decreasing = TRUE),
+          implementation=order(G.imp.degree/G.degree, decreasing = TRUE))
+kable(indegreetable)
+```
+
+To see how these rankings are formed, the raw data is included into the table 
+
+```{r}
+G.degree[27] <- 0.5
+indegreetable <- data.frame(
+          creativity    =order(G.cr.degree/G.degree, decreasing = TRUE),
+          frienddegree.cr  =as.integer(G.degree[order(G.cr.degree/G.degree, decreasing=TRUE)]),
+          crdegree      =as.integer(G.cr.degree[order(G.cr.degree/G.degree, decreasing=TRUE)]),
+          influence     =order(G.infl.degree/G.degree, decreasing = TRUE),
+          frienddegree.infl  =as.integer(G.degree[order(G.infl.degree/G.degree, decreasing=TRUE)]),
+          infldegree    =as.integer(G.infl.degree[order(G.infl.degree/G.degree, decreasing=TRUE)]),
+          implementation=order(G.imp.degree/G.degree, decreasing = TRUE),
+          frienddegree.imp  =as.integer(G.degree[order(G.imp.degree/G.degree, decreasing=TRUE)]),
+          impldegree    =as.integer(G.imp.degree[order(G.imp.degree/G.degree, decreasing=TRUE)]))
+kable(indegreetable)
+```
+
+There are also network-specific properties that are important for the choice of teams. Below rankings are created from weighted averages of standardised metrics, including network proporties from the friendship graph.
+
+For the **Design** team it would be useful to have:
+
+* High leverage - high betweenness centrality 
+* Percieved creativity - higher weighting on in degree centrality of the creativity network
+
+```{r}
+G.degree[27] <- 0.5
+standardise <- function(x){(x-min(x))/(max(x)-min(x))}
+
+fr.btwn.centr <- as.numeric(betweenness(G))
+
+creativitymetric <- (standardise(fr.btwn.centr*0.25) + standardise(G.cr.degree)*0.75 )/standardise(G.degree)
+
+designtable <- data.frame(
+          node   =order(creativitymetric, decreasing = TRUE),
+          creativitymetric =creativitymetric[order(creativitymetric, decreasing=TRUE)],
+          creativitydegree =as.integer(G.cr.degree[order(creativitymetric, decreasing=TRUE)]),
+          frienddegree  =as.integer(G.degree[order(creativitymetric, decreasing=TRUE)]),
+          btwncentrality = fr.btwn.centr[order(creativitymetric, decreasing=TRUE)])
+kable(designtable)
+```
+
+For the **Lobbying** team it would be useful to have:
+
+* High influence - high eigenvector centrality 
+* Percieved influence - in degree centrality of the influence network
+
+```{r}
+fr.eign.centr <- as.numeric(eigen_centrality(G)$vector)
+
+influencemetric <- (standardise(fr.eign.centr*0.5) + standardise(G.infl.degree)*0.5 )/standardise(G.degree)
+influencemetric[27] <- NaN
+
+
+lobbytable <- data.frame(
+          node   =order(influencemetric, decreasing = TRUE),
+          influencemetric =influencemetric[order(influencemetric, decreasing=TRUE)],
+          influencedegree =as.integer(G.infl.degree[order(influencemetric, decreasing=TRUE)]),
+          frienddegree  =as.integer(G.degree[order(influencemetric, decreasing=TRUE)]),
+          eigncentrality = fr.eign.centr[order(influencemetric, decreasing=TRUE)])
+kable(lobbytable)
+```
+
+For the **Implementation** team it would be useful to have:
+
+* High cohesion - high closeness centrality 
+* Percieved implementation skills - in degree centrality of the implementation network
+
+```{r}
+fr.cls.centr <- closeness(G)
+
+implementationmetric <- (standardise(fr.cls.centr*0.25) + standardise(G.imp.degree)*0.75 )/standardise(G.degree)
+implementationmetric[27] <- NaN
+
+
+impltable <- data.frame(
+          node   =order(implementationmetric, decreasing = TRUE),
+          implementationmetric =implementationmetric[order(implementationmetric, decreasing=TRUE)],
+          influencedegree =as.integer(G.infl.degree[order(implementationmetric, decreasing=TRUE)]),
+          frienddegree  =as.integer(G.degree[order(implementationmetric, decreasing=TRUE)]),
+          closenesscentrality = fr.cls.centr[order(implementationmetric, decreasing=TRUE)])
+kable(impltable)
+```
+
+```{r echo=FALSE, eval=FALSE}
+tabletoexport <- data.frame(
+  node = 1:60,
+  
+  frienddegree = G.degree,
+  creativitydegree = G.cr.degree,
+  influencedegree = G.infl.degree,
+  implementationdegree = G.imp.degree,
+  cluster = as.integer(V(G)$color),
+
+  creativitymetric = (standardise(fr.btwn.centr*0.25) + standardise(G.cr.degree)*0.75 ),
+  scaledcreativitymetric = creativitymetric,
+  
+  influencemetric = (standardise(fr.eign.centr*0.5) + standardise(G.infl.degree)*0.5 ),
+  scaledinfluencemetric = influencemetric,
+  
+  implementationmetric = (standardise(fr.cls.centr*0.25) + standardise(G.imp.degree)*0.75 ),
+  scaledimplementationmetric = implementationmetric
+  
+)
+write.xlsx(tabletoexport, "AinBOptimisationdata.xlsx")
+```
+
+##Notes
+
+* tkplot doesn't work well on mac computers (requires Xquartz and loads the graph outside of the file.)
+* Spin clustering (4 or 5 spins) provides a very similar result to leading eigenvector clustering and walking trap clustering in this case
+* louvain community detection only works for undirected graphs (same with fast_greedy)
+* There are no maximally connected cliques of 6
+* layout_with_kk makes a nice layout, but layout.fruchterman.reingold puts the clusters together nicely.
