@@ -1,0 +1,169 @@
+---
+title: "Analytics in Business Group Project - Question 5"
+author: "Siow Meng Low"
+date: "11 Dec 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(reshape2)
+library(lsa)
+library(ggplot2)
+library(pander)
+```
+
+```{r echo=FALSE}
+# load data
+picks.data <- read.csv("peoplepickinganonymised.csv")
+```
+
+```{r echo=FALSE}
+# cosine similarity
+
+# first create an empty matrix that will be populated with the cosine similarity results
+mat.cosine <- matrix(0, 60, 5)
+mat.jaccard <- matrix(0, 60, 5)
+
+# subset data to only include the picks
+sub.data <- picks.data[ , -1:-3]
+
+# Function to compute Jaccard Similarity
+jaccard <- function(x, y) {
+    dotproduct <- x %*% y
+    dotproduct / (sum(x^2) + sum(y^2) - dotproduct)
+}
+
+# calculate cosine similarity and populate matrix
+for (id in 1:nrow(sub.data)) {
+    
+    # extract all the vectors needed to calculate the cosine similarities
+    friend <- as.numeric(sub.data[id, 1:60])   # skip the influence picks
+    creativity <- as.numeric(sub.data[id, 121:180])
+    influence <- as.numeric(sub.data[id, 181:240])
+    implementation <- as.numeric(sub.data[id, 241:300])
+    
+    # populate cosine matrix
+    mat.cosine[id, 2] <- cosine(friend, friend)
+    mat.cosine[id, 3] <- cosine(friend, creativity)
+    mat.cosine[id, 4] <- cosine(friend, influence)
+    mat.cosine[id, 5] <- cosine(friend, implementation)
+    mat.jaccard[id, 2] <- jaccard(friend, friend)
+    mat.jaccard[id, 3] <- jaccard(friend, creativity)
+    mat.jaccard[id, 4] <- jaccard(friend, influence)
+    mat.jaccard[id, 5] <- jaccard(friend, implementation)
+    
+}
+
+plotDF <- data.frame(x = 0:6, 
+                     cosine = c(0, 1/6, 2/6, 3/6, 4/6, 5/6, 1), 
+                     jaccard = c(0, 1/11, 2/10, 3/9, 4/8, 5/7, 1))
+
+ggplot(data = plotDF, aes(x = x)) + 
+    geom_line(aes(y = cosine, colour = 'b')) + 
+    geom_line(aes(y = jaccard, colour = 'r')) + 
+    labs(x = "Number of Identical Selections", y = "Similarity Measure") + 
+    scale_x_continuous(breaks = 0:6) + 
+    scale_colour_discrete(name = "Similarity", breaks = c('b', 'r'), labels = c("Cosine", "Jaccard"))
+
+# calculate the mean cosine similarity for each ID, without Friend_Friend column
+means <- rowMeans(mat.cosine[ , 3:5])
+meansJaccard <- rowMeans(mat.jaccard[ , 3:5])
+
+# combine means to cosine matrix
+mat.cosineM <- cbind(mat.cosine, means)
+mat.jaccardM <- cbind(mat.jaccard, meansJaccard)
+
+# convert to dataframe, add column names, populate ID column
+data.cosine <- data.frame(mat.cosineM)
+data.jaccard <- data.frame(mat.jaccardM)
+
+namesPair <- c("id", "Friend_Friend", "Friend_Creativity", "Friend_Influence", "Friend_Implementation", "Average")
+colnames(data.cosine) <- namesPair
+colnames(data.jaccard) <- namesPair
+
+data.cosine$id <- 1:60
+data.jaccard$id <- 1:60
+
+# order "average" decreasing
+cosine.order <- data.cosine[order(-data.cosine$Average), ]
+jaccard.order <- data.jaccard[order(-data.jaccard$Average), ]
+
+# z-score function
+z.score <- function(x, mean, sd) {
+    (x - mean) / sd
+}
+
+# mean of cosine scores
+mean.cosine <- mean(cosine.order$Average, na.rm = TRUE)
+mean.jaccard <- mean(jaccard.order$Average, na.rm = TRUE)
+
+# sd of cosine scores
+sd.cosine <- sd(cosine.order$Average, na.rm = TRUE)
+sd.jaccard <- sd(jaccard.order$Average, na.rm = TRUE)
+
+# apply z-score function to calculate z-score
+cosine.order$Z.score <- sapply(cosine.order$Average, z.score, mean = mean.cosine, sd = sd.cosine)
+jaccard.order$Z.score <- sapply(jaccard.order$Average, z.score, mean = mean.jaccard, sd = sd.jaccard)
+
+```
+
+In the context of the assignment, we are comparing a two 60-element binary vectors. Each vector should have six 1s. In this case, cosine similarity grows linearly with the number of identical selection. In contrast, Jaccard similarity coefficient grows slower with small number of identical selections. As the number of identical selections gets larger, Jaccard Similarity increases at a faster rate. From the plot, we can observe that Jaccard similarity is always smaller than cosine similarity.  
+
+Paccard similarity coefficient may be better for the purpose of leader selection. A person may know the strengths and weaknesses of his/her close friends better and a small number of identical selections may indicate thoughtfulness in selecting team members for different tasks. On the contrary, a person, who selected completely different team for each tasks, might have chosen his/her members in completely random fashion (without giving deep thoughts).  
+
+Therefore, a better similarity measure should penalise small number of identical selections lesser than large number of identical selections (since the likelihood of "inflexibility" goes up as number of identical selection increases). Paccard similarity coefficient has this property.  
+
+```{r echo=FALSE, fig.width = 10, fig.align = "center"}
+# create bins in cosine.order
+cosine.order$bin <- cut(cosine.order$Average, breaks = 5, labels = c("(0,0.2]","(0.2,0.4]", "(0.4,0.6]","(0.6,0.8]","(0.8,1]"))
+jaccard.order$bin <- cut(jaccard.order$Average, breaks = 5, labels = c("(0,0.2]","(0.2,0.4]", "(0.4,0.6]","(0.6,0.8]","(0.8,1]"))
+
+# plot histogram of average cosine similarities
+ggplot(na.omit(cosine.order), aes(bin, fill = bin)) + 
+    geom_bar() + 
+    labs(x = "Cosine Similarity", y = "Count", title = "Average Cosine Similarity Frequency") + 
+    scale_fill_brewer(palette = "Blues", direction = -1, guide = FALSE)
+
+ggplot(na.omit(jaccard.order), aes(bin, fill = bin)) + 
+    geom_bar() + 
+    labs(x = "Jaccard Similarity", y = "Count", title = "Average Jaccard Similarity Frequency") + 
+    scale_fill_brewer(palette = "Blues", direction = -1, guide = FALSE)
+
+```
+
+The graph above shows the average cosine similarity for each ID. As can be seen, over 20 IDs display a high level of flexibility in picking teams for different tasks. The average cosine similarity was calculated using each IDs social picks as benchmark. These picks were then compared to each IDs picks for different tasks. Three IDs have an average cosine similarity of 1, indicating very low levels of flexibility. 
+
+```{r echo=FALSE, fig.width = 10, fig.align = "center", fig.height=8}
+# plot each IDs average cosine score
+ggplot(na.omit(cosine.order), aes(x = reorder(factor(id), Average), y = Average, fill = Average)) + 
+    geom_bar(stat = "identity") + 
+    coord_flip() + 
+    labs(x = "ID", y = "Average Cosine Similarity", title = "Average Cosine Similarity by ID") + 
+    scale_fill_distiller(palette = "Blues", guide = FALSE, direction = 1)
+ggplot(na.omit(jaccard.order), aes(x = reorder(factor(id), Average), y = Average, fill = Average)) + 
+    geom_bar(stat = "identity") + 
+    coord_flip() + 
+    labs(x = "ID", y = "Average Jaccard Similarity", title = "Average Jaccard Similarity by ID") + 
+    scale_fill_distiller(palette = "Blues", guide = FALSE, direction = 1)
+
+```
+
+```{r echo=FALSE, fig.align="center"}
+# subset cosine table to only include ID, average, z-score
+cosine.table <- cosine.order[, c("id", "Average", "Z.score")]
+panderOptions("digits", 3)
+pander(cosine.table)
+
+jaccard.table <- jaccard.order[, c("id", "Average", "Z.score")]
+panderOptions("digits", 3)
+pander(jaccard.table)
+
+ggplot(data = cosine.order, aes(x = Z.score)) + geom_histogram(binwidth = 0.25)
+ggplot(data = jaccard.order, aes(x = Z.score)) + geom_histogram(binwidth = 0.25)
+
+### write.csv(cosine.order, file = "cosine.csv")
+```
+
+### notes
+- create histogram to show the distribution of average cosine sim
+
