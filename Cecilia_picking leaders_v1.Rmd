@@ -1,0 +1,376 @@
+---
+title: "Cecilia_AiB - picking teams"
+author: "Cecilia Nok Sze Cheung"
+date: "11 December 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Steven's stuff
+
+
+```{r setup, include=FALSE}
+library(reshape2)
+library(lsa)
+library(ggplot2)
+library(pander)
+```
+
+```{r echo=FALSE}
+# load data
+picks.data <- read.csv("peoplepickinganonymised.csv")
+```
+
+```{r echo=FALSE}
+# a bit of exploratory analysis
+
+sequence <- c(0,60,120,240)
+count <- 0
+
+for (i in 1:60) {
+  count <- 1
+  for (j in sequence) {
+    assign(paste("candidate", i, count , sep=""), picks.data[, 3+i+j])
+    count <- count + 1
+  }
+  
+}
+
+#paste("id",1,sep = '')
+
+```
+
+```{r echo=FALSE}
+# cosine similarity
+
+# first create an empty matrix that will be populated with the cosine similarity results
+mat.cosine <- matrix(0, 60, 5)
+mat.cosine2 <- matrix(0, 60, 5)
+
+# subset data to only include the picks
+sub.data <- picks.data[, 4:length(picks.data)]
+
+# calculate cosine similarity and populate matrix
+for (id in 1:nrow(sub.data)) {
+  
+  # extract all the vectors needed to calculate the cosine similarities
+  friend <- as.numeric(sub.data[id, 1:60])   # skip the influence picks
+  creativity <- as.numeric(sub.data[id, 121:180])
+  influence <- as.numeric(sub.data[id, 181:240])
+  implementation <- as.numeric(sub.data[id, 241:300])
+  
+  # populate cosine matrix
+  mat.cosine[id,2] <- cosine(friend, friend)
+  mat.cosine[id,3] <- cosine(friend, creativity)
+  mat.cosine[id,4] <- cosine(friend, influence)
+  mat.cosine[id,5] <- cosine(friend, implementation)
+}
+
+# manual calculation for cosine similarity
+cosine.sim <- function(x,y) {
+  x %*% y / sqrt(x%*%x * y%*%y)
+}
+
+# check if results are the same using built function
+for (id in 1:nrow(sub.data)) {
+  
+  # extract all the vectors needed to calculate the cosine similarities
+  friend <- as.numeric(sub.data[id, 1:60])   # skip the influence picks
+  creativity <- as.numeric(sub.data[id, 121:180])
+  influence <- as.numeric(sub.data[id, 181:240])
+  implementation <- as.numeric(sub.data[id, 241:300])
+  
+  # populate cosine matrix
+  mat.cosine2[id,2] <- cosine.sim(friend, friend)
+  mat.cosine2[id,3] <- cosine.sim(friend, creativity)
+  mat.cosine2[id,4] <- cosine.sim(friend, influence)
+  mat.cosine2[id,5] <- cosine.sim(friend, implementation)
+}
+
+# mat.cosine == mat.cosine2, returns TRUE
+
+# calculate the mean cosine similarity for each ID, without Friend_Friend column
+means <- rowMeans(mat.cosine[,3:5])
+
+# combine means to cosine matrix
+mat.cosineM <- cbind(mat.cosine, means)
+
+# convert to dataframe, add column names, populate ID column
+data.cosine <- data.frame(mat.cosineM)
+
+names <- c("id", "Friend_Friend", "Friend_Creativity", "Friend_Influence", "Friend_Implementation", "Average")
+colnames(data.cosine) <- names
+
+data.cosine$id <- 1:60
+
+# order "average" decreasing
+cosine.order <- data.cosine[order(-data.cosine$Average),]
+
+# z-score function
+z.score <- function(x, mean, sd) {
+  (x - mean) / sd
+}
+
+# mean of cosine scores
+mean.cosine <- mean(cosine.order$Average, na.rm = TRUE)
+
+# sd of cosine scores
+sd.cosine <- sd(cosine.order$Average, na.rm = TRUE)
+
+# apply z-score function to calculate z-score
+cosine.order$Z.score <- sapply(cosine.order$Average, z.score, mean = mean.cosine,sd=sd.cosine)
+```
+
+```{r echo=FALSE, fig.width = 10, fig.align = "center"}
+# create bins in cosine.order
+cosine.order$bin <- cut(cosine.order$Average, breaks = 5, labels = c("(0,0.2]","(0.2,0.4]", "(0.4,0.6]","(0.6,0.8]","(0.8,1]"))
+
+# plot histogram of average cosine similarities
+ggplot(na.omit(cosine.order), aes(bin, fill = bin)) +
+  geom_bar() +
+  labs(x = "Cosine Similarity", y = "Count", title = "Average Cosine Similarity Frequency") +
+  scale_fill_brewer(palette = "Blues",direction = -1, guide=FALSE)
+```
+
+The graph above shows the average cosine similarity for each ID. As can be seen, over 20 IDs display a high level of flexibility in picking teams for different tasks. The average cosine similarity was calculated using each IDs social picks as benchmark. These picks were then compared to each IDs picks for different tasks. Three IDs have an average cosine similarity of 1, indicating very low levels of flexibility. 
+
+```{r echo=FALSE, fig.width = 10, fig.align = "center", fig.height=8}
+# plot each IDs average cosine score
+ggplot(na.omit(cosine.order), aes(x = reorder(factor(id), Average), y = Average, fill = Average)) +
+  geom_bar(stat="identity") +
+  coord_flip() +
+  labs(x = "ID", y = "Average Cosine Similarity", title = "Average Cosine Similarity by ID") +
+  scale_fill_distiller(palette = "Blues", guide=FALSE, direction = 1)
+```
+
+```{r echo=FALSE, fig.align="center"}
+# subset cosine table to only include ID, average, z-score
+cosine.table <- cosine.order[, c("id","Average","Z.score")]
+panderOptions("digits", 3)
+pander(cosine.table)
+
+### write.csv(cosine.order, file = "cosine.csv")
+```
+
+
+
+## Analysis - picking leaders
+
+```{r}
+library(reshape2)
+library(plyr)
+
+```
+
+
+```{r}
+fulldata <- read.csv("peoplepickinganonymised.csv")
+```
+
+
+```{r}
+#cleaning up and wrangling data
+
+#add row to sum up columns
+fulldata <-as.numeric(fulldata)
+fulldata[, c(1:303)] <- sapply(fulldata[, c(1:303)], as.numeric)
+fulldata["Total",] <- colSums(fulldata)
+
+#make seperate df for each component
+friends <- fulldata[,4:63] 
+advice <- fulldata[,64:123]
+creativity <- fulldata[,124:183]
+implementation <- fulldata[,184:243]
+influence <- fulldata[,244:303]
+
+#transform dataframes and turn back into df
+friendstr <- as.data.frame(t(friends))
+advicetr <- as.data.frame(t(advice))
+creativitytr <- as.data.frame(t(creativity))
+implementationtr <- as.data.frame(t(implementation))
+influencetr <- as.data.frame(t(influence))
+
+#add rank to dataframes and sort
+friendstr[,"rank"] <-rank(-friendstr[,"Total"], ties.method = "min")
+friendstr1 <-friendstr[order(friendstr$rank, decreasing=FALSE), ]
+
+advicetr[,"rank"] <-rank(-advicetr[,"Total"], ties.method = "min")
+advicetr1 <-advicetr[order(advicetr$rank, decreasing=FALSE), ]
+
+creativitytr[,"rank"] <-rank(-creativitytr[,"Total"], ties.method = "min")
+creativitytr1 <-creativitytr[order(creativitytr$rank, decreasing=FALSE), ]
+
+implementationtr[,"rank"] <-rank(-implementationtr[,"Total"], ties.method = "min")
+implementationtr1 <- implementationtr[order(implementationtr$rank, decreasing=FALSE), ]
+
+influencetr[,"rank"] <-rank(-influencetr[,"Total"], ties.method = "min")
+influencetr1 <- influencetr[order(influencetr$rank, decreasing=FALSE), ]
+
+#guestlist preference
+
+#1 exclusive 2 expansive 3 tight
+guestlist <-as.data.frame(fulldata[,"guestlist"])
+guestlist[,"id"] <- c(1:61)
+
+```
+
+```{r}
+
+
+#manipulate cosine order table to add ranks
+
+cosine.order[,"creativity.cs.rank"] <-rank(cosine.order[,"Friend_Creativity"], ties.method = "min")
+cosine.order[,"influence.cs.rank"] <-rank(cosine.order[,"Friend_Influence"], ties.method = "min")
+cosine.order[,"implementation.cs.rank"] <-rank(cosine.order[,"Friend_Implementation"], ties.method = "min")
+cosine.order[,"average.cs.rank"] <-rank(cosine.order[,"Average"], ties.method = "min")
+
+
+```
+
+
+
+## Lobbying
+
+Criteria:
+- needs to be expansive/exclusive
+- good at giving advice and peers must view this person as influential
+- flexible when picking teams
+- has decent amount of friends 
+
+```{r}
+
+#filter out expansive or exclusive
+x <- c(1,2)
+df <- guestlist[guestlist[,1] %in% x,]
+
+#for the above people, pull advice and influence scores and ranks and create table
+
+values <- df$id #list of people
+
+lob1 <- advicetr[values, 61:62]
+lob2 <- influencetr[values,61:62]
+lob3 <- cbind(lob1, lob2)
+lob4 <- rename(lob3[,1:2], c("Total"="advice_total", "rank"="advice_rank"))
+lob5 <- rename(lob3[,3:4], c("Total"="influence_total", "rank"="influence_rank"))
+summarytable <- cbind(lob4, lob5)
+
+#add cosine similiarity to table for influence and average
+summarytable <- cbind(summarytable,cosine.order[values, c(10,12)])
+summarytable[, "total"] <- rowSums(summarytable[,c(2,4:6)])
+summarytable[,"total.rank"] <-rank(summarytable[,"total"], ties.method = "min")
+
+#friend check
+summarytable <-cbind(summarytable, friendstr[values,61:62])
+summarytable <-rename(summarytable, c("Total"="friends_total", "rank"="friends_rank"))
+
+#sort based on total.rank
+summarytable <- summarytable[order(summarytable$total.rank, decreasing=FALSE), ]
+
+
+print(summarytable)
+
+```
+
+When looking at this table, we can narrow it down to person 33 - who appears to have a good balance of the different criteria that we look at, and also happens to have a decent number of friends as well.
+
+## Creativity
+
+Criteria:
+- needs to be expansive
+- good at giving advice and peers must view this person as creative
+- flexible when picking teams
+- has decent amount of friends 
+
+```{r}
+
+#filter out expansive
+y <- 2
+df1 <- guestlist[guestlist[,1] %in% y,]
+
+#for the above people, pull advice and influence scores and ranks and create table
+
+values1 <- df1$id #list of people
+
+creat1 <- advicetr[values1, 61:62]
+creat2 <- creativitytr[values1,61:62]
+creat3 <- cbind(creat1, creat2)
+creat4 <- rename(creat3[,1:2], c("Total"="advice_total", "rank"="advice_rank"))
+creat5 <- rename(creat3[,3:4], c("Total"="creativity_total", "rank"="creativity_rank"))
+summarytable1 <- cbind(creat4, creat5)
+
+#add cosine similiarity to table for influence and average
+summarytable1 <- cbind(summarytable1,cosine.order[values1, c(9,12)])
+summarytable1[, "total"] <- rowSums(summarytable1[,c(2,4:6)])
+summarytable1[,"total.rank"] <-rank(summarytable1[,"total"], ties.method = "min")
+
+#friend check
+summarytable1 <-cbind(summarytable1, friendstr[values1,61:62])
+summarytable1 <-rename(summarytable1, c("Total"="friends_total", "rank"="friends_rank"))
+
+#sort based on total.rank
+summarytable1 <- summarytable1[order(summarytable1$total.rank, decreasing=FALSE), ]
+
+
+print(summarytable1)
+
+```
+
+Leader: 21
+
+## Implementation
+
+Criteria:
+- needs to be cohesive
+- good at giving advice and peers must view this person as good at implementation
+- flexible when picking teams
+- has decent amount of friends 
+
+
+```{r}
+
+#filter out cohesive
+z <- 3
+df2 <- guestlist[guestlist[,1] %in% z,]
+
+#for the above people, pull advice and implementation scores and ranks and create table
+
+values2 <- df2$id #list of people
+
+implem1 <- advicetr[values2, 61:62]
+implem2 <- creativitytr[values2,61:62]
+implem3 <- cbind(implem1, implem2)
+implem4 <- rename(implem3[,1:2], c("Total"="advice_total", "rank"="advice_rank"))
+implem5 <- rename(implem3[,3:4], c("Total"="implementation_total", "rank"="implementation_rank"))
+summarytable2 <- cbind(implem4, implem5)
+
+#add cosine similiarity to table for influence and average
+summarytable2 <- cbind(summarytable2,cosine.order[values2, c(11,12)])
+summarytable2[, "total"] <- rowSums(summarytable2[,c(2,4:6)])
+summarytable2[,"total.rank"] <-rank(summarytable2[,"total"], ties.method = "min")
+
+#friend check
+summarytable2 <-cbind(summarytable2, friendstr[values2,61:62])
+summarytable2 <-rename(summarytable2, c("Total"="friends_total", "rank"="friends_rank"))
+
+#sort based on total.rank
+summarytable2 <- summarytable2[order(summarytable2$total.rank, decreasing=FALSE), ]
+
+print(summarytable2)
+
+```
+
+Leader: Person 19
+
+(thinking whether i should add weights to the different criteria?)
+
+
+
+
+
+
+
+
+
