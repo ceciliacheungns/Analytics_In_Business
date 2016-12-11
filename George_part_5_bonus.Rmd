@@ -68,6 +68,8 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
 ```{r}
 # Load data
 data <- read.csv("C:/Users/user/Dropbox (Personal)/Imperial College Business School/MSc Business Analytics/Autumn Term/Analytics in Business/Team Project Assignment/peoplepickinganonymised.csv")
+
+#data <- read.csv("peoplepickinganonymised.csv")
 ```
 
 The similarity measures that are used for each individual are the following:
@@ -96,7 +98,7 @@ for (id in 1:dim(data)[1]) {
     d <- data.matrix(data[id, c(4:63, 124:303)])
     dim(d) <- c(60, 4)
     cosine(d)
-    cs$cosine[id] <- (sum(cosine(d)) - 4) / 12
+    cs$cosine[id] <- mean(cosine(d)[1, 2:4])
 }
 # Replace NaN values with 0
 cs$cosine[is.nan(cs$cosine)] <- 0
@@ -120,7 +122,7 @@ for (id in 1:dim(data)[1]) {
             jacc[i, j] <- length(d[(d[,i] + d[,j]) == 2, c(i, j)])/2 / (dim(d)[1] - length(d[(d[,i] + d[,j]) == 0, c(i, j)])/2)
         }
     }
-    cs$jaccard[id] <- (sum(jacc) - 4) / 12
+    cs$jaccard[id] <- mean(jacc[1, 2:4])
 }
 # Replace NaN values with 0
 cs$jaccard[is.nan(cs$jaccard)] <- 0
@@ -145,7 +147,7 @@ for (id in 1:dim(data)[1]) {
             ochi[i, j] <- sqrt(a / (a + length(d[d[,i] == 1, c(i, j)])/2) *  a / (a + length(d[d[,j] == 1, c(i, j)])/2))
         }
     }
-    cs$ochiai[id] <- (sum(ochi) - 2) / 6
+    cs$ochiai[id] <- mean(2 * ochi[1, 2:4])
 }
 # Replace NaN values with 0
 cs$ochiai[is.nan(cs$ochiai)] <- 0
