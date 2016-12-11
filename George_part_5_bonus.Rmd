@@ -1,0 +1,220 @@
+---
+title: "ainb_group"
+author: "George Pastakas"
+date: "December 9, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(lsa)
+library(ggplot2)
+library(ggthemes)
+```
+
+### Part 5 - Bonus
+
+```{r}
+### Reference: http://www.cookbook-r.com/Graphs/Multiple_graphs_on_one_page_(ggplot2)/
+
+# Multiple plot function
+#
+# ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
+# - cols:   Number of columns in layout
+# - layout: A matrix specifying the layout. If present, 'cols' is ignored.
+#
+# If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
+# then plot 1 will go in the upper left, 2 will go in the upper right, and
+# 3 will go all the way across the bottom.
+#
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+
+  numPlots = length(plots)
+
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                    ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+
+ if (numPlots==1) {
+    print(plots[[1]])
+
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
+```
+
+```{r}
+# Load data
+data <- read.csv("C:/Users/user/Dropbox (Personal)/Imperial College Business School/MSc Business Analytics/Autumn Term/Analytics in Business/Team Project Assignment/peoplepickinganonymised.csv")
+```
+
+The similarity measures that are used for each individual are the following:
+
+1. Cosine similarity
+2. Jaccard similarity
+3. Ochiai coefficient
+
+References:
+
+* http://datascience.stackexchange.com/questions/5121/applications-and-differences-for-jaccard-similarity-and-cosine-similarity
+* https://en.wikipedia.org/wiki/Jaccard_index
+* https://en.wikipedia.org/wiki/Cosine_similarity#Ochiai_coefficient
+* http://stats.stackexchange.com/questions/61705/similarity-coefficients-for-binary-data-why-choose-jaccard-over-russell-and-rao
+
+```{r, fig.align='center', fig.width=10, fig.height=8}
+# Create a dataframe for cosine similarities
+cs <- data.frame(id = data[, 1], cosine = rep(0),  zscore_cos = rep(0), 
+                                 jaccard = rep(0), zscore_jac = rep(0),
+                                 ochiai = rep(0),  zscore_och = rep(0)) 
+
+##### COSINE SIMILARITY ###
+
+# Compute for each id the cosine between all elemenets and take their average value
+for (id in 1:dim(data)[1]) {
+    d <- data.matrix(data[id, c(4:63, 124:303)])
+    dim(d) <- c(60, 4)
+    cosine(d)
+    cs$cosine[id] <- (sum(cosine(d)) - 4) / 12
+}
+# Replace NaN values with 0
+cs$cosine[is.nan(cs$cosine)] <- 0
+
+mu <- mean(cs$cosine)
+sigma <- sd(cs$cosine)
+# Compute z-scores
+for (id in 1:dim(data)[1]) {
+    cs$zscore_cos[id] <- (cs$cosine[id] - mu) / sigma
+}
+
+##### JACCARD SIMILARITY ###
+
+# Compute for each id the jaccard similarity between all elemenets and take their average value
+for (id in 1:dim(data)[1]) {
+    d <- data.matrix(data[id, c(4:63, 124:303)])
+    dim(d) <- c(60, 4)
+    jacc <- matrix(0, nrow = 4, ncol = 4)
+    for (i in 1:4){
+        for (j in 1:4){
+            jacc[i, j] <- length(d[(d[,i] + d[,j]) == 2, c(i, j)])/2 / (dim(d)[1] - length(d[(d[,i] + d[,j]) == 0, c(i, j)])/2)
+        }
+    }
+    cs$jaccard[id] <- (sum(jacc) - 4) / 12
+}
+# Replace NaN values with 0
+cs$jaccard[is.nan(cs$jaccard)] <- 0
+
+mu <- mean(cs$jaccard)
+sigma <- sd(cs$jaccard)
+# Compute z-scores
+for (id in 1:dim(data)[1]) {
+    cs$zscore_jac[id] <- (cs$jaccard[id] - mu) / sigma
+}
+
+##### OCHIAI SIMILARITY ###
+
+# Compute for each id the ochiai similarity between all elemenets and take their average value
+for (id in 1:dim(data)[1]) {
+    d <- data.matrix(data[id, c(4:63, 124:303)])
+    dim(d) <- c(60, 4)
+    ochi <- matrix(0, nrow = 4, ncol = 4)
+    for (i in 1:4){
+        for (j in 1:4){
+            a <- length(d[(d[,i] + d[,j]) == 2, c(i, j)])/2
+            ochi[i, j] <- sqrt(a / (a + length(d[d[,i] == 1, c(i, j)])/2) *  a / (a + length(d[d[,j] == 1, c(i, j)])/2))
+        }
+    }
+    cs$ochiai[id] <- (sum(ochi) - 2) / 6
+}
+# Replace NaN values with 0
+cs$ochiai[is.nan(cs$ochiai)] <- 0
+
+mu <- mean(cs$ochiai)
+sigma <- sd(cs$ochiai)
+# Compute z-scores
+for (id in 1:dim(data)[1]) {
+    cs$zscore_och[id] <- (cs$ochiai[id] - mu) / sigma
+}
+
+# Visualise results
+p_cos_1 <- ggplot(cs, aes(x = cosine)) + 
+           geom_histogram(colour = "black", fill = "lightblue", alpha = .75,
+                          breaks = seq(0, 1, by = .1)) +
+           scale_y_continuous(breaks = seq(1, 20, 1), limits = c(0, 15)) +
+           scale_x_continuous(breaks = seq(0, 1, .1)) +
+           labs(x = "Cosine similarity", y = "Number of individuals") +
+           theme_bw()
+
+p_cos_2 <- ggplot(cs, aes(y = cosine, x = id)) + 
+           geom_bar(stat = "identity", width = .75,
+                    colour = "black", fill = "lightblue", alpha = .75) +
+           coord_flip() +
+           scale_x_continuous(breaks = seq(1, 60, 1)) +
+           scale_y_continuous(breaks = seq(0, 1, .1)) +
+           labs(y = "Cosine similarity", x = "ID") +
+           theme_bw()
+
+p_jac_1 <- ggplot(cs, aes(x = jaccard)) + 
+           geom_histogram(colour = "black", fill = "pink", alpha = .75,
+                          breaks = seq(0, 1, by = .1)) +
+           scale_y_continuous(breaks = seq(1, 20, 1), limits = c(0, 15)) +
+           scale_x_continuous(breaks = seq(0, 1, .1)) +
+           labs(x = "Jaccard similarity", y = "Number of individuals") +
+           theme_bw()
+
+p_jac_2 <- ggplot(cs, aes(y = jaccard, x = id)) + 
+           geom_bar(stat = "identity", width = .75,
+                    colour = "black", fill = "pink", alpha = .75) +
+           coord_flip() +
+           scale_x_continuous(breaks = seq(1, 60, 1)) +
+           scale_y_continuous(breaks = seq(0, 1, .1)) +
+           labs(y = "Jaccard similarity", x = "ID") +
+           theme_bw()
+
+p_och_1 <- ggplot(cs, aes(x = ochiai)) + 
+           geom_histogram(colour = "black", fill = "lightgreen", alpha = .75,
+                          breaks = seq(0, 1, by = .1)) +
+           scale_y_continuous(breaks = seq(1, 20, 1), limits = c(0, 15)) +
+           scale_x_continuous(breaks = seq(0, 1, .1)) +
+           labs(x = "Ochiai similarity", y = "Number of individuals") +
+           theme_bw()
+
+p_och_2 <- ggplot(cs, aes(y = ochiai, x = id)) + 
+           geom_bar(stat = "identity", width = .75,
+                    colour = "black", fill = "lightgreen", alpha = .75) +
+           coord_flip() +
+           scale_x_continuous(breaks = seq(1, 60, 1)) +
+           scale_y_continuous(breaks = seq(0, 1, .1)) +
+           labs(y = "Ochiai similarity", x = "ID") +
+           theme_bw()
+
+multiplot(p_cos_1, p_jac_1, p_och_1, cols = 3)
+multiplot(p_cos_2, p_jac_2, p_och_2, cols = 3)
+
+# Correlation between the different similarity measures
+print("Correlation between similarity measures:")
+cor(cs[, c(2, 4, 6)])
+
+```
+
