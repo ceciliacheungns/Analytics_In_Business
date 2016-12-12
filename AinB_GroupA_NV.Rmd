@@ -1,0 +1,96 @@
+---
+title: "AinB Group Assignment"
+author: "Nikhita Venkatesan"
+date: "12 December 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(igraph)
+library(stargazer)
+```
+
+```{r, echo = FALSE}
+peoplepicking <- read.csv("peoplepickinganonymised.csv")
+```
+
+```{r, echo = FALSE}
+friend <- peoplepicking[,4:63]
+advice <- peoplepicking[,64:123]
+creativity <- peoplepicking[,124:183]
+implementation <- peoplepicking[,184:243]
+influence <- peoplepicking[,244:303]
+```
+
+```{r, echo=FALSE}
+friendmat <- as.matrix(friend)
+advicemat <- as.matrix(advice)
+creativitymat <- as.matrix(creativity)
+implemat <- as.matrix(implementation)
+influencemat <- as.matrix(influence)
+```
+
+```{r, echo = FALSE}
+GraphFS <- graph_from_adjacency_matrix(friendmat, mode = "directed",add.colnames = TRUE, diag=FALSE)
+
+DegreeFS <- degree(GraphFS, mode="in")
+```
+
+```{r, echo = FALSE}
+GraphCR <- graph_from_adjacency_matrix(creativitymat, mode = "directed",add.colnames = TRUE, diag=FALSE)
+
+DegreeCR <- degree(GraphCR, mode="in")
+```
+
+```{r, echo = FALSE}
+GraphIM <- graph_from_adjacency_matrix(implemat, mode = "directed",add.colnames = TRUE, diag=FALSE)
+
+DegreeIM <- degree(GraphIM, mode="in")
+```
+
+```{r, echo = FALSE}
+GraphIN <- graph_from_adjacency_matrix(influencemat, mode = "directed",add.colnames = TRUE, diag=FALSE)
+
+DegreeIN <- degree(GraphIN, mode="in")
+```
+
+# Regression Model Analysis
+
+Model 1: Friendship v/s Creativity
+
+```{r, echo = FALSE, results = 'asis'}
+fsCR <- lm(DegreeCR ~ DegreeFS)
+
+fsCR.lpm <- glm(DegreeCR ~ DegreeFS, family = "gaussian")
+
+fsCR.poi <- glm(DegreeCR ~ DegreeFS, family = "poisson"(link = "log"))
+
+stargazer(list(fsCR, fsCR.lpm, fsCR.poi), type = "html", digits = 2)
+```
+\newline
+
+Model 2: Friendship v/s Implementation
+
+```{r, echo = FALSE, results = 'asis'}
+fsIM <- lm(DegreeIM ~ DegreeFS)
+
+fsIM.lpm <- glm(DegreeIM ~ DegreeFS, family = "gaussian")
+
+fsIM.poi <- glm(DegreeIM ~ DegreeFS, family = "poisson"(link = "log"))
+
+stargazer(list(fsIM, fsIM.lpm, fsIM.poi), type = "html", digits = 2)
+```
+\newline
+
+Model 3: Friendship v/s Influence
+```{r, echo = FALSE, results = 'asis'}
+fsIN <- lm(DegreeIN ~ DegreeFS)
+
+fsIN.lpm <- glm(DegreeIN ~ DegreeFS, family = "gaussian")
+
+fsIN.poi <- glm(DegreeIN ~ DegreeFS, family = "poisson"(link = "log"))
+
+stargazer(list(fsIN, fsIN.lpm, fsIN.poi), type = "html", digits = 2)
+```
+
