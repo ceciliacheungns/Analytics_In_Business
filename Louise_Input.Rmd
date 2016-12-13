@@ -158,7 +158,7 @@ V(G)[clique4]$color <- "blue"
 set.seed(40041)
 
 # Set layout options
-l <- layout.fruchterman.reingold(G)
+l <- layout_as_tree(G)
 
 # Plot graph and subgraph
 plot.igraph(x=G,layout=l, vertex.size=15, edge.arrow.size=0.2, edge.width=0.2, vertex.label.cex=0.42, vertex.label.family="Helvetica")
@@ -310,14 +310,37 @@ For the **Design** team it would be useful to have:
 
 * High leverage - high betweenness centrality 
 * Percieved creativity - higher weighting on in degree centrality of the creativity network
+* Either large or medium sized parties
+* Expansive > Exclusive > Tight party invites
 
 ```{r}
-G.degree[27] <- 0.5
+dfpartymatrix <- fulldata[,1:3]
+levels(dfpartymatrix$style) <- c("cosy","mixer","party")
+levels(dfpartymatrix$guestlist) <- c("exclusive","expansive","tight")
+```
+
+```{r}
+##define metric for design team based on party choices, from stage/style matrix in slides
+dfpartymatrix$designpartymetric <- 0
+##add party type metrics
+dfpartymatrix$designpartymetric[dfpartymatrix$guestlist == "exclusive"] <- 2
+dfpartymatrix$designpartymetric[dfpartymatrix$guestlist == "expansive"] <- 3
+dfpartymatrix$designpartymetric[dfpartymatrix$guestlist == "tight"] <- 1
+##add party size metrics
+dfpartymatrix$designpartymetric[dfpartymatrix$style == "cosy"] <- dfpartymatrix$designpartymetric[dfpartymatrix$style == "cosy"] + 1
+dfpartymatrix$designpartymetric[dfpartymatrix$style == "mixer"] <- 
+dfpartymatrix$designpartymetric[dfpartymatrix$style == "mixer"] + 3
+dfpartymatrix$designpartymetric[dfpartymatrix$style == "expansive"] <- dfpartymatrix$designpartymetric[dfpartymatrix$style == "expansive"] + 3
+```
+
+```{r}
 standardise <- function(x){(x-min(x))/(max(x)-min(x))}
 
 fr.btwn.centr <- as.numeric(betweenness(G))
 
-creativitymetric <- (standardise(fr.btwn.centr*0.25) + standardise(G.cr.degree)*0.75 )/standardise(G.degree)
+creativitymetric <- (standardise(fr.btwn.centr)*0.2 + 
+                       standardise(G.cr.degree)*0.6 +
+                      standardise(dfpartymatrix$designpartymetric)*0.2)/standardise(G.degree)
 
 designtable <- data.frame(
           node   =order(creativitymetric, decreasing = TRUE),
@@ -332,11 +355,29 @@ For the **Lobbying** team it would be useful to have:
 
 * High influence - high eigenvector centrality 
 * Percieved influence - in degree centrality of the influence network
+* Large > medium > small sized parties
+* Exclusive or Expansive > Tight party invites
+
+```{R}
+dfpartymatrix$lobbypartymetric <- 0
+##add party type metrics
+dfpartymatrix$lobbypartymetric[dfpartymatrix$guestlist == "exclusive"] <- 3
+dfpartymatrix$lobbypartymetric[dfpartymatrix$guestlist == "expansive"] <- 3
+dfpartymatrix$lobbypartymetric[dfpartymatrix$guestlist == "tight"] <- 1
+##add party size metrics
+dfpartymatrix$lobbypartymetric[dfpartymatrix$style == "cosy"] <- dfpartymatrix$lobbypartymetric[dfpartymatrix$style == "cosy"] + 1
+dfpartymatrix$lobbypartymetric[dfpartymatrix$style == "mixer"] <- 
+dfpartymatrix$lobbypartymetric[dfpartymatrix$style == "mixer"] + 2
+dfpartymatrix$lobbypartymetric[dfpartymatrix$style == "expansive"] <- dfpartymatrix$lobbypartymetric[dfpartymatrix$style == "expansive"] + 3
+```
 
 ```{r}
 fr.eign.centr <- as.numeric(eigen_centrality(G)$vector)
 
-influencemetric <- (standardise(fr.eign.centr*0.5) + standardise(G.infl.degree)*0.5 )/standardise(G.degree)
+influencemetric <- (standardise(fr.eign.centr)*0.4 + 
+                      standardise(G.infl.degree)*0.4 +
+                      standardise(dfpartymatrix$lobbypartymetric)*0.2
+                         )/standardise(G.degree)
 influencemetric[27] <- NaN
 
 
@@ -353,13 +394,30 @@ For the **Implementation** team it would be useful to have:
 
 * High cohesion - high closeness centrality 
 * Percieved implementation skills - in degree centrality of the implementation network
+* Small > medium > large sized parties
+* Tight > Exclusive > Expansive  party invites
+
+```{r}
+dfpartymatrix$implpartymetric <- 0
+##add party type metrics
+dfpartymatrix$implpartymetric[dfpartymatrix$guestlist == "exclusive"] <- 2
+dfpartymatrix$implpartymetric[dfpartymatrix$guestlist == "expansive"] <- 1
+dfpartymatrix$implpartymetric[dfpartymatrix$guestlist == "tight"] <- 3
+##add party size metrics
+dfpartymatrix$implpartymetric[dfpartymatrix$style == "cosy"] <- dfpartymatrix$implpartymetric[dfpartymatrix$style == "cosy"] + 3
+dfpartymatrix$implpartymetric[dfpartymatrix$style == "mixer"] <- 
+dfpartymatrix$implpartymetric[dfpartymatrix$style == "mixer"] + 2
+dfpartymatrix$implpartymetric[dfpartymatrix$style == "expansive"] <- dfpartymatrix$implpartymetric[dfpartymatrix$style == "expansive"] + 1
+```
 
 ```{r}
 fr.cls.centr <- closeness(G)
 
-implementationmetric <- (standardise(fr.cls.centr*0.25) + standardise(G.imp.degree)*0.75 )/standardise(G.degree)
+implementationmetric <- (standardise(fr.cls.centr)*0.2 +
+                         standardise(G.imp.degree)*0.6 +
+                         standardise(dfpartymatrix$implpartymetric)*0.2
+                         )/standardise(G.degree)
 implementationmetric[27] <- NaN
-
 
 impltable <- data.frame(
           node   =order(implementationmetric, decreasing = TRUE),
@@ -380,13 +438,13 @@ tabletoexport <- data.frame(
   implementationdegree = G.imp.degree,
   cluster = as.integer(V(G)$color),
 
-  creativitymetric = (standardise(fr.btwn.centr*0.25) + standardise(G.cr.degree)*0.75 ),
+  creativitymetric = creativitymetric*standardise(G.degree),
   scaledcreativitymetric = creativitymetric,
   
-  influencemetric = (standardise(fr.eign.centr*0.5) + standardise(G.infl.degree)*0.5 ),
+  influencemetric = influencemetric*standardise(G.degree),
   scaledinfluencemetric = influencemetric,
   
-  implementationmetric = (standardise(fr.cls.centr*0.25) + standardise(G.imp.degree)*0.75 ),
+  implementationmetric = implementationmetric*standardise(G.degree),
   scaledimplementationmetric = implementationmetric
   
 )
