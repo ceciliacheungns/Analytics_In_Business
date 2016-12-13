@@ -10,6 +10,8 @@ library(reshape2)
 library(lsa)
 library(ggplot2)
 library(pander)
+library(MASS)
+library(AER)
 ```
 
 ```{r echo=FALSE}
@@ -27,17 +29,43 @@ mat.jaccard <- matrix(0, 60, 5)
 # subset data to only include the picks
 sub.data <- picks.data[ , -1:-3]
 
-# Function to compute Jaccard Similarity
-jaccard <- function(x, y) {
-    dotproduct <- x %*% y
-    dotproduct / (sum(x^2) + sum(y^2) - dotproduct)
-}
-
 diag(sub.data[ , 1:60]) <- 0
 diag(sub.data[ , 61:120]) <- 0
 diag(sub.data[ , 121:180]) <- 0
 diag(sub.data[ , 181:240]) <- 0
 diag(sub.data[ , 241:300]) <- 0
+
+friendInDegree <- colSums(sub.data[ , 1:60])
+creativityInDegree <- colSums(sub.data[ , 121:180])
+influenceInDegree <- colSums(sub.data[ , 181:240])
+implementationInDegree <- colSums(sub.data[ , 241:300])
+
+summary(creativityPoissonModel <- glm(creativityInDegree ~ friendInDegree, family = "poisson"))
+summary(influencePoissonModel <- glm(influenceInDegree ~ friendInDegree, family = "poisson"))
+summary(implementationPoissonModel <- glm(implementationInDegree ~ friendInDegree, family = "poisson"))
+
+summary(creativityNBModel <- glm.nb(creativityInDegree ~ friendInDegree))
+summary(influenceNBModel <- glm.nb(influenceInDegree ~ friendInDegree))
+summary(implementationNBModel <- glm.nb(implementationInDegree ~ friendInDegree))
+
+logLik(creativityPoissonModel)
+logLik(creativityNBModel)
+
+logLik(influencePoissonModel)
+logLik(influenceNBModel)
+
+logLik(implementationPoissonModel)
+logLik(implementationNBModel)
+
+dispersiontest(creativityPoissonModel, trafo = 1)
+dispersiontest(influencePoissonModel, trafo = 1)
+dispersiontest(implementationPoissonModel, trafo = 1)
+
+# Function to compute Jaccard Similarity
+jaccard <- function(x, y) {
+    dotproduct <- x %*% y
+    dotproduct / (sum(x^2) + sum(y^2) - dotproduct)
+}
 
 # calculate cosine similarity and populate matrix
 for (id in 1:nrow(sub.data)) {
