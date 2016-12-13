@@ -33,6 +33,12 @@ jaccard <- function(x, y) {
     dotproduct / (sum(x^2) + sum(y^2) - dotproduct)
 }
 
+diag(sub.data[ , 1:60]) <- 0
+diag(sub.data[ , 61:120]) <- 0
+diag(sub.data[ , 121:180]) <- 0
+diag(sub.data[ , 181:240]) <- 0
+diag(sub.data[ , 241:300]) <- 0
+
 # calculate cosine similarity and populate matrix
 for (id in 1:nrow(sub.data)) {
     
