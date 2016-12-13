@@ -1,0 +1,556 @@
+---
+title: "Analytics in Business Group Project"
+author: "Group 1"
+date: "13 Dec 2016"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+library(reshape2)
+library(lsa)
+library(ggplot2)
+library(pander)
+library(MASS)
+library(AER)
+library(gridExtra)
+library(plyr)
+library(igraph)
+library(stargazer)
+```
+
+```{r echo=FALSE}
+# load data
+picks.data <- read.csv("peoplepickinganonymised.csv")
+```
+
+## Question 1: Regressions  
+
+The density plots of the in-degrees for the four networks are plotted below.  
+  
+```{r echo=FALSE, warning = FALSE, fig.height = 8, fig.width = 15}
+# cosine similarity
+
+# first create an empty matrix that will be populated with the cosine similarity results
+mat.cosine <- matrix(0, 60, 5)
+mat.jaccard <- matrix(0, 60, 5)
+
+# subset data to only include the picks
+sub.data <- picks.data[ , -1:-3]
+
+friendInDegree <- colSums(sub.data[ , 1:60])
+creativityInDegree <- colSums(sub.data[ , 121:180])
+influenceInDegree <- colSums(sub.data[ , 181:240])
+implementationInDegree <- colSums(sub.data[ , 241:300])
+
+densityFriends <- 
+    ggplot() + geom_density(aes(x = friendInDegree)) +
+    scale_x_continuous(breaks = seq(0, 25, 5)) +
+    scale_y_continuous(breaks = seq(0, 0.25, 0.05)) +
+    labs(x = "In-Degree", y = "Density", title = "Density Plot of Friendship Network In-Degree") +
+    theme_bw()
+
+densityCreative <- 
+    ggplot() + geom_density(aes(x = creativityInDegree)) +
+    scale_x_continuous(breaks = seq(0, 25, 5)) +
+    scale_y_continuous(breaks = seq(0, 0.25, 0.05)) +
+    labs(x = "In-Degree", y = "Density", title = "Density Plot of Creativity Network In-Degree") +
+    theme_bw()
+
+densityInfluence <- 
+    ggplot() + geom_density(aes(x = influenceInDegree)) +
+    scale_x_continuous(breaks = seq(0, 25, 5)) +
+    scale_y_continuous(breaks = seq(0, 0.25, 0.05)) +
+    labs(x = "In-Degree", y = "Density", title = "Density Plot of Influence Network In-Degree") +
+    theme_bw()
+
+densityImplementation <- 
+    ggplot() + geom_density(aes(x = implementationInDegree)) +
+    scale_x_continuous(breaks = seq(0, 25, 5)) +
+    scale_y_continuous(breaks = seq(0, 0.25, 0.05)) +
+    labs(x = "In-Degree", y = "Density", title = "Density Plot of Implementation Network In-Degree") +
+    theme_bw()
+
+grid.arrange(densityFriends, densityCreative, densityInfluence, densityImplementation, ncol = 2)
+
+```
+  
+The in-degree is a count data. Judging from the above density plots, we could use the discrete probability distribution (e.g. Poisson, Negative Binomial) for the regression model. An overdispersion test has been performed and there is evidence of overdispersion (i.e. mean is not equal to variance) in the data, especially for implementation network (P-Value < 0.01). Therefore, negative binomial regression will be a better fit.  
+
+\pagebreak
+
+The below three tables shows the regression results of the three networks:  
+
+```{r echo=FALSE, results = "asis"}
+
+fsCR.poi <- glm(creativityInDegree ~ friendInDegree, family = "poisson"(link = "log"))
+fsCR.nb <- glm.nb(creativityInDegree ~ friendInDegree)
+
+stargazer(list(fsCR.poi, fsCR.nb), type = "latex", style = "qje", digits = 3, 
+          header = FALSE, no.space = TRUE, title = "Regression of Creativity Network In-Degree", 
+          dep.var.labels = "Creativity Network In-Degree", font.size = "footnotesize")
+#          column.labels = c("Poisson Model", "Negative Binomial Model"))
+
+```
+
+```{r echo=FALSE, results = "asis"}
+
+fsIN.poi <- glm(influenceInDegree ~ friendInDegree, family = "poisson"(link = "log"))
+fsIN.nb <- glm.nb(influenceInDegree ~ friendInDegree)
+
+stargazer(list(fsIN.poi, fsIN.nb), type = "latex", style = "qje", digits = 3, 
+          header = FALSE, no.space = TRUE, title = "Regression of Influence Network In-Degree", 
+          dep.var.labels = "Influence Network In-Degree", font.size = "footnotesize") 
+#          column.labels = c("Poisson Model", "Negative Binomial Model"))
+
+```
+
+```{r echo=FALSE, results = "asis"}
+
+fsIM.poi <- glm(implementationInDegree ~ friendInDegree, family = "poisson"(link = "log"))
+fsIM.nb <- glm.nb(implementationInDegree ~ friendInDegree)
+
+stargazer(list(fsIM.poi, fsIM.nb), type = "latex", style = "qje", digits = 3, 
+          header = FALSE, no.space = TRUE, title = "Regression of Implementation Network In-Degree", 
+          dep.var.labels = "Implementation Network In-Degree", font.size = "footnotesize")
+
+```
+
+\pagebreak
+
+As seen from the tables, the in-degree of friendship network is very statistically significant. Hence higher popularity is expected to increase one's chances in being picked for the other three networks.  
+
+```{r echo=FALSE, warning = FALSE, fig.height = 8, fig.width = 15}
+# Function to compute Jaccard Similarity
+jaccard <- function(x, y) {
+    dotproduct <- x %*% y
+    dotproduct / (sum(x^2) + sum(y^2) - dotproduct)
+}
+
+diag(sub.data[ , 1:60]) <- 0
+diag(sub.data[ , 61:120]) <- 0
+diag(sub.data[ , 121:180]) <- 0
+diag(sub.data[ , 181:240]) <- 0
+diag(sub.data[ , 241:300]) <- 0
+
+# calculate cosine similarity and populate matrix
+for (id in 1:nrow(sub.data)) {
+    
+    # extract all the vectors needed to calculate the cosine similarities
+    friend <- as.numeric(sub.data[id, 1:60])   # skip the influence picks
+    creativity <- as.numeric(sub.data[id, 121:180])
+    influence <- as.numeric(sub.data[id, 181:240])
+    implementation <- as.numeric(sub.data[id, 241:300])
+    
+    # populate cosine matrix
+    mat.cosine[id, 2] <- cosine(friend, friend)
+    mat.cosine[id, 3] <- cosine(friend, creativity)
+    mat.cosine[id, 4] <- cosine(friend, influence)
+    mat.cosine[id, 5] <- cosine(friend, implementation)
+    mat.jaccard[id, 2] <- jaccard(friend, friend)
+    mat.jaccard[id, 3] <- jaccard(friend, creativity)
+    mat.jaccard[id, 4] <- jaccard(friend, influence)
+    mat.jaccard[id, 5] <- jaccard(friend, implementation)
+    
+}
+
+# calculate the mean cosine similarity for each ID, without Friend_Friend column
+meansCosine <- rowMeans(mat.cosine[ , 3:5])
+meansJaccard <- rowMeans(mat.jaccard[ , 3:5])
+
+# combine means to cosine matrix
+mat.cosineM <- cbind(mat.cosine, meansCosine)
+mat.jaccardM <- cbind(mat.jaccard, meansJaccard)
+
+# convert to dataframe, add column names, populate ID column
+data.cosine <- data.frame(mat.cosineM)
+data.jaccard <- data.frame(mat.jaccardM)
+
+namesPair <- c("id", "Friend_Friend", "Friend_Creativity", "Friend_Influence", "Friend_Implementation", "Average")
+colnames(data.cosine) <- namesPair
+colnames(data.jaccard) <- namesPair
+
+data.cosine$id <- 1:60
+data.jaccard$id <- 1:60
+
+# order "average" decreasing
+cosine.order <- data.cosine[order(-data.cosine$Average), ]
+jaccard.order <- data.jaccard[order(-data.jaccard$Average), ]
+
+# z-score function
+z.score <- function(x, mean, sd) {
+    (x - mean) / sd
+}
+
+# mean of cosine scores
+mean.cosine <- mean(cosine.order$Average, na.rm = TRUE)
+mean.jaccard <- mean(jaccard.order$Average, na.rm = TRUE)
+
+# sd of cosine scores
+sd.cosine <- sd(cosine.order$Average, na.rm = TRUE)
+sd.jaccard <- sd(jaccard.order$Average, na.rm = TRUE)
+
+# apply z-score function to calculate z-score
+cosine.order$Z.score <- sapply(cosine.order$Average, z.score, mean = mean.cosine, sd = sd.cosine)
+jaccard.order$Z.score <- sapply(jaccard.order$Average, z.score, mean = mean.jaccard, sd = sd.jaccard)
+```
+
+## Question 2: Cosine Similarity  
+
+Three different values were calculated for the similarities between Friendship-Creativity, Friendship-Influence, and Friendship-Implementation picks. The final score averages the three individual scores. The below graphs display the distribution of the average scores and the ranking of each individuals based on the scores (lower similarity score indicates higher flexibility).  
+
+```{r plot, echo=FALSE, warning = FALSE, fig.height = 8, fig.width = 15}
+
+# plot histogram of average cosine similarities
+histCos <- 
+    ggplot(na.omit(cosine.order), aes(x = Average)) + 
+    geom_histogram(colour = "black", fill = "lightblue", alpha = .75, breaks = seq(0, 1, by = .1)) +
+    scale_y_continuous(breaks = seq(1, 20, 1), limits = c(0, 13)) +
+    scale_x_continuous(breaks = seq(0, 1, .1)) +
+    labs(x = "Cosine similarity", y = "Number of individuals", title = "Histogram of Cosine Similarity") +
+    theme_bw()
+
+barCos <-
+    ggplot(na.omit(cosine.order), aes(y = Average, x = reorder(factor(id), Average))) +
+    geom_bar(stat = "identity", width = .75, colour = "black", fill = "lightblue", alpha = .75) +
+    scale_y_continuous(breaks = seq(0, 1, .1)) +
+    labs(y = "Cosine similarity", x = "ID", title = "Ranking of Cosine Similarity") +
+    coord_flip() +
+    theme_bw()
+
+grid.arrange(histCos, barCos, ncol = 2)
+
+```
+
+\pagebreak
+
+Below table shows the average similarity score and Z-score for each individual (order by similarity score).  
+
+\footnotesize
+
+```{r pander, echo=FALSE, warning = FALSE}
+
+# subset cosine table to only include ID, average, z-score
+cosine.table <- cosine.order[, c("id", "Average", "Z.score")]
+panderOptions("digits", 3)
+colnames(cosine.table) <- c("ID", "Average Score", "Z-score")
+row.names(cosine.table) <- NULL
+pander(cosine.table, caption = "Average Cosine Similarity Score Ranking")
+
+# jaccard.table <- jaccard.order[, c("id", "Average", "Z.score")]
+# panderOptions("digits", 3)
+# colnames(jaccard.table) <- c("ID", "Average Score", "Z-score")
+# row.names(jaccard.table) <- NULL
+# pander(jaccard.table, caption = "Average Jaccard Similarity Score Ranking")
+
+```
+
+\pagebreak
+
+## Question 3: Leaders  
+
+![People-Picking for Projects](PeoplePickingGrid.png)
+
+With reference to the above framework, the leader for each task must have the guestlist listed in below table:  
+
+```{r echo = FALSE}
+leaderCriteria <- data.frame(tasks = c("Design", "Lobbying", "Implementation"), 
+                             guest = c("Expansive", "Expansive, Exclusive", "Cohesive"), 
+                             similarity = c("0.25", "0.25", "0.2"), 
+                             friendship = c("0.05", "0.05", "0.1"),
+                             advice = c("0.30", "0.30", "0.35"),
+                             creativity = c("0.40", "0", "0"),
+                             influence = c("0", "0.40", "0"), 
+                             implementation = c("0", "0", "0.35"))
+
+colnames(leaderCriteria) <- c("Tasks", "Guest List", "Flexibility", "Friends", "Advice", 
+                              "Creative", "Influence", "Impl")
+
+pander(leaderCriteria[ , 1:2], caption = "Guest List Criteria for Each Leder")
+
+```
+
+To select the best leader, the in-degree centrality scores from each category are weighted according their respective importance in each task. The detailed weightings is tabulated in the below table.  
+
+```{r echo = FALSE}
+pander(leaderCriteria[ , -2], caption = "Weighting Each Score for Leader Selection")
+```
+
+```{r echo=FALSE}
+
+fulldata <- picks.data
+
+#cleaning up and wrangling data
+fulldata[, c(1:303)] <- sapply(fulldata[, c(1:303)], as.numeric)
+
+#make seperate df for each component, set diagonal to 0 and sum up columns
+friends <- fulldata[,4:63] 
+friends[row(friends) == col(friends) ] <- 0
+friends["Total",] <- colSums(friends)
+
+advice <- fulldata[,64:123]
+advice[row(advice) == col(advice) ] <- 0
+advice["Total",] <- colSums(advice)
+
+
+creativity <- fulldata[,124:183]
+creativity[row(creativity) == col(creativity) ] <- 0
+creativity["Total",] <- colSums(creativity)
+
+implementation <- fulldata[,184:243]
+implementation[row(implementation) == col(implementation) ] <- 0
+implementation["Total",] <- colSums(implementation)
+
+
+influence <- fulldata[,244:303]
+influence[row(influence) == col(influence) ] <- 0
+influence["Total",] <- colSums(influence)
+
+#transform dataframes and turn back into df
+friendstr <- as.data.frame(t(friends))
+advicetr <- as.data.frame(t(advice))
+creativitytr <- as.data.frame(t(creativity))
+implementationtr <- as.data.frame(t(implementation))
+influencetr <- as.data.frame(t(influence))
+
+#add rank to dataframes and sort
+friendstr[,"rank"] <- rank(-friendstr[,"Total"], ties.method = "average")
+friendstr1 <-friendstr[order(friendstr$rank, decreasing=FALSE), ]
+
+advicetr[,"rank"] <- rank(-advicetr[,"Total"], ties.method = "average")
+advicetr1 <-advicetr[order(advicetr$rank, decreasing=FALSE), ]
+
+creativitytr[,"rank"] <- rank(-creativitytr[,"Total"], ties.method = "average")
+creativitytr1 <-creativitytr[order(creativitytr$rank, decreasing=FALSE), ]
+
+implementationtr[,"rank"] <- rank(-implementationtr[,"Total"], ties.method = "average")
+implementationtr1 <- implementationtr[order(implementationtr$rank, decreasing=FALSE), ]
+
+influencetr[,"rank"] <- rank(-influencetr[,"Total"], ties.method = "average")
+influencetr1 <- influencetr[order(influencetr$rank, decreasing=FALSE), ]
+
+#guestlist preference
+
+#1 exclusive 2 expansive 3 tight
+guestlist <- as.data.frame(fulldata[,"guestlist"])
+guestlist[,"id"] <- c(1:60)
+
+cosine.order[,"average.cs.rank"] <- rank(cosine.order[,"Average"], ties.method = "average")
+
+#order via id
+cosine.order <- cosine.order[order(cosine.order$id, decreasing=FALSE), ]
+
+```
+
+### Lobbying Leader  
+
+The following table lists the top 3 leader candidates for lobbying. We select person 33 to be the leader.  
+
+```{r LobbyLeader, echo=FALSE}
+
+# only accept expansive or exclusive
+b <- c(1,2)
+df4 <- guestlist[guestlist[,1] %in% b,]
+
+#for the above people, pull advice and influence scores and ranks and create table
+
+values <- df4$id #list of people
+
+lob10 <- advicetr[values, 61:62]
+lob10 <- rename(lob10[,1:2], c("Total"="advice_total", "rank"="advice_rank"))
+lob10[,"advice.weighted.rank"] <- lob10$advice_rank * 0.30
+lob20 <- influencetr[values,61:62]
+lob20 <- rename(lob20[,1:2], c("Total"="influence_total", "rank"="influence_rank"))
+lob20[,"influence.weight.rank"] <- lob20$influence_rank * 0.40
+summarytable01 <- cbind(lob10, lob20)
+
+#add cosine similiarity to table for influence and average
+summarytable01 <- cbind(summarytable01, cosine.order[values, 8])
+summarytable01 <- rename(summarytable01, c("cosine.order[values, 8]"="cs_avg_rank"))
+summarytable01[,"cs_avg_rank.weighted"] <- summarytable01$cs_avg_rank * 0.25
+
+#add friend to table
+summarytable01 <-cbind(summarytable01, friendstr[values,61:62])
+summarytable01 <-rename(summarytable01, c("Total"="friends_total", "rank"="friends_rank"))
+summarytable01[,"friends_rank.weighted"] <- summarytable01$friends_rank * 0.05
+
+#sum up all criteria and rank
+summarytable01[, "total"] <- rowSums(summarytable01[,c(3,6,8,11)]) 
+summarytable01[,"total.rank"] <-rank(summarytable01[,"total"], ties.method = "min")
+
+
+
+#sort based on total.rank
+summarytable01 <- summarytable01[order(summarytable01$total.rank, decreasing=FALSE), ]
+
+summarytable01$ID <- rownames(summarytable01)
+
+lobbyTop3 <- head(summarytable01[ , c("ID", "cs_avg_rank", "friends_rank", "advice_rank", "influence_rank", 
+                                      "total.rank")], 3)
+
+colnames(lobbyTop3) <- c("ID", "Flexibility", "Friends", "Advice", "Influence", "Final Rank")
+
+lobbyTop3$ID <- unlist(sapply(lobbyTop3$ID, strsplit, split = "_"))[seq(2, 6, 2)]
+
+rownames(lobbyTop3) <- NULL
+#rownames(lobbyTop3) <- unlist(sapply(rownames(lobbyTop3), strsplit, split = "_"))[seq(2, 6, 2)]
+
+pander(lobbyTop3, caption = "Top 3 Lobbying Leader Candidates")
+
+```
+
+### Design Leader  
+
+The following table lists the top 3 leader candidates for design. Since person 33 has already been selected for lobbying, we select the next best candidate - person 30.  
+
+```{r DesignLeader, echo=FALSE}
+
+# only accept expansive
+c <- 2
+df5 <- guestlist[guestlist[,1] %in% c,]
+
+#for the above people, pull advice and creativity scores and ranks and create table
+
+values11 <- df5$id #list of people
+
+creat11 <- advicetr[values11, 61:62]
+creat11 <- rename(creat11[,1:2], c("Total"="advice_total", "rank"="advice_rank"))
+creat11[,"advice.weighted.rank"] <- creat11$advice_rank * 0.30
+creat21 <- creativitytr[values11,61:62]
+creat21 <- rename(creat21[,1:2], c("Total"="creativity_total", "rank"="creativity_rank"))
+creat21[,"influence.weighted.rank"] <- creat21$creativity_rank * 0.40
+summarytable11 <- cbind(creat11, creat21)
+
+
+#add cosine similiarity to table for influence and average
+summarytable11 <- cbind(summarytable11,cosine.order[values11, 8])
+summarytable11 <- rename(summarytable11, c("cosine.order[values11, 8]"="cs_avg_rank"))
+summarytable11["cs_avg_rank.weighted"] <- summarytable11$cs_avg_rank * 0.25
+
+#add friend to table
+summarytable11 <-cbind(summarytable11, friendstr[values11,61:62])
+summarytable11 <-rename(summarytable11, c("Total"="friends_total", "rank"="friends_rank"))
+summarytable11[,"friends_rank.weighted"] <- summarytable11$friends_rank * 0.05
+
+
+#sum up criteria
+summarytable11[, "total"] <- rowSums(summarytable11[,c(3,6,8,11)])
+summarytable11[,"total.rank"] <-rank(summarytable11[,"total"], ties.method = "min")
+
+#sort based on total.rank
+summarytable11 <- summarytable11[order(summarytable11$total.rank, decreasing=FALSE), ]
+
+summarytable11$ID <- rownames(summarytable11)
+
+designTop3 <- head(summarytable11[ , c("ID", "cs_avg_rank", "friends_rank", "advice_rank", "creativity_rank", 
+                                       "total.rank")], 3)
+
+colnames(designTop3) <- c("ID", "Flexibility", "Friends", "Advice", "Creative", "Final Rank")
+designTop3$ID <- unlist(sapply(designTop3$ID, strsplit, split = "_"))[seq(2, 6, 2)]
+rownames(designTop3) <- NULL
+
+pander(designTop3, caption = "Top 3 Design Leader Candidates")
+
+```
+
+### Implementation Leader  
+
+The following table lists the top 3 leader candidates for implementation and person 19 is chosen as the leader.  
+
+```{r ImplLeader, echo=FALSE}
+
+# only accept cohesive
+a <- 3
+df3 <- guestlist[guestlist[,1] %in% a,]
+
+#for the above people, pull advice and implementation scores and ranks and create table
+
+values21 <- df3$id #list of people
+
+implem11 <- advicetr[values21, 61:62]
+implem11 <- rename(implem11[,1:2], c("Total"="advice_total", "rank"="advice_rank"))
+implem11[,"advice.weighted.rank"] <- implem11$advice_rank * 0.35
+implem21 <- implementationtr[values21,61:62]
+implem21 <- rename(implem21[,1:2], c("Total"="implementation_total", "rank"="implementation_rank"))
+implem21[,"influence.weighted.rank"] <- implem21$implementation_rank * 0.35
+summarytable21 <- cbind(implem11, implem21)
+
+
+#add cosine similiarity to table for influence and average
+summarytable21 <- cbind(summarytable21,cosine.order[values21, 8])
+summarytable21 <- rename(summarytable21, c("cosine.order[values21, 8]"="cs_avg_rank"))
+summarytable21["cs_avg_rank.weighted"] <- summarytable21$cs_avg_rank * 0.2
+
+#add friend to table
+summarytable21 <-cbind(summarytable21, friendstr[values21,61:62])
+summarytable21 <-rename(summarytable21, c("Total"="friends_total", "rank"="friends_rank"))
+summarytable21[,"friends_rank.weighted"] <- summarytable21$friends_rank * 0.1
+
+#sum up criteria
+summarytable21[, "total"] <- rowSums(summarytable21[,c(3,6,8,11)])
+summarytable21[,"total.rank"] <-rank(summarytable21[,"total"], ties.method = "min")
+
+#sort based on total.rank
+summarytable21 <- summarytable21[order(summarytable21$total.rank, decreasing=FALSE), ]
+
+summarytable21$ID <- rownames(summarytable21)
+
+implTop3 <- head(summarytable21[ , c("ID", "cs_avg_rank", "friends_rank", "advice_rank", 
+                                     "implementation_rank", "total.rank")], 3)
+
+colnames(implTop3) <- c("ID", "Flexibility", "Friends", "Advice", "Implementation", "Final Rank")
+
+implTop3$ID <- unlist(sapply(implTop3$ID, strsplit, split = "_"))[seq(2, 6, 2)]
+rownames(implTop3) <- NULL
+
+pander(implTop3, caption = "Top 3 Implementation Leader Candidates")
+
+```
+
+## Question 4 - WIP
+
+
+## Question 5 - WIP  
+
+In the context of the assignment, we are comparing a two 60-element binary vectors. Each vector should have six 1s. In this case, cosine similarity grows linearly with the number of identical selection. In contrast, Jaccard similarity coefficient grows slower with small number of identical selections. As the number of identical selections gets larger, Jaccard Similarity increases at a faster rate. From the plot, we can observe that Jaccard similarity is always smaller than cosine similarity.  
+
+Paccard similarity coefficient may be better for the purpose of leader selection. A person may know the strengths and weaknesses of his/her close friends better and a small number of identical selections may indicate thoughtfulness in selecting team members for different tasks. On the contrary, a person, who selected completely different team for each tasks, might have chosen his/her members in completely random fashion (without giving deep thoughts).  
+
+Therefore, a better similarity measure should penalise small number of identical selections lesser than large number of identical selections (since the likelihood of "inflexibility" goes up as number of identical selection increases). Paccard similarity coefficient has this property.  
+
+```{r echo=FALSE, fig.width = 10, fig.align = "center"}
+# create bins in cosine.order
+cosine.order$bin <- cut(cosine.order$Average, breaks = 5, labels = c("(0,0.2]","(0.2,0.4]", "(0.4,0.6]","(0.6,0.8]","(0.8,1]"))
+jaccard.order$bin <- cut(jaccard.order$Average, breaks = 5, labels = c("(0,0.2]","(0.2,0.4]", "(0.4,0.6]","(0.6,0.8]","(0.8,1]"))
+
+# plot histogram of average cosine similarities
+ggplot(na.omit(cosine.order), aes(bin, fill = bin)) + 
+    geom_bar() + 
+    labs(x = "Cosine Similarity", y = "Count", title = "Average Cosine Similarity Frequency") + 
+    scale_fill_brewer(palette = "Blues", direction = -1, guide = FALSE)
+
+ggplot(na.omit(jaccard.order), aes(bin, fill = bin)) + 
+    geom_bar() + 
+    labs(x = "Jaccard Similarity", y = "Count", title = "Average Jaccard Similarity Frequency") + 
+    scale_fill_brewer(palette = "Blues", direction = -1, guide = FALSE)
+
+```
+
+```{r echo=FALSE, fig.align="center"}
+
+plotDF <- data.frame(x = 0:6, 
+                     cosine = c(0, 1/6, 2/6, 3/6, 4/6, 5/6, 1), 
+                     jaccard = c(0, 1/11, 2/10, 3/9, 4/8, 5/7, 1))
+
+ggplot(data = plotDF, aes(x = x)) + 
+    geom_line(aes(y = cosine, colour = 'b')) + 
+    geom_line(aes(y = jaccard, colour = 'r')) + 
+    labs(x = "Number of Identical Selections", y = "Similarity Measure") + 
+    scale_x_continuous(breaks = 0:6) + 
+    scale_colour_discrete(name = "Similarity", breaks = c('b', 'r'), labels = c("Cosine", "Jaccard"))
+
+
+```
+
+
