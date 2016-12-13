@@ -112,10 +112,20 @@ plot(cfg, as.undirected(G), vertex.size=15, edge.arrow.size=0.2, edge.width=0.2,
 
 
 ```{r}
+G.degree <- degree(G, mode="in")
+set.seed(888)
 com <- cluster_infomap(G)
-V(G)$color <- com$membership+1
 G <- set_graph_attr(G, "layout", layout.fruchterman.reingold(G))
-plot(G, vertex.size=15, edge.arrow.size=0.2, edge.width=0.2, vertex.label.cex=0.42, vertex.label.color="white", vertex.label.family="Helvetica")
+nodes <- 1:60
+cluster1 <- nodes[com$membership == 1]
+cluster2 <- nodes[com$membership == 2]
+cluster3 <- nodes[com$membership == 3]
+cluster4 <- nodes[com$membership == 4]
+V(G)[cluster1]$color <- "#2DA5DB"
+V(G)[cluster2]$color <- "#37BDA7"
+V(G)[cluster3]$color <- "#E50328"
+V(G)[cluster4]$color <- "orchid4"
+plot(G, vertex.size=(log(G.degree))*5+5, edge.arrow.size=0.2, edge.width=0.2, vertex.label.cex=0.42, vertex.label.color="white", vertex.label.family="Helvetica", edge.curved=TRUE)
 ```
 
 ##Cliques
@@ -326,11 +336,10 @@ dfpartymatrix$designpartymetric <- 0
 dfpartymatrix$designpartymetric[dfpartymatrix$guestlist == "exclusive"] <- 2
 dfpartymatrix$designpartymetric[dfpartymatrix$guestlist == "expansive"] <- 3
 dfpartymatrix$designpartymetric[dfpartymatrix$guestlist == "tight"] <- 1
-##add party size metrics
-dfpartymatrix$designpartymetric[dfpartymatrix$style == "cosy"] <- dfpartymatrix$designpartymetric[dfpartymatrix$style == "cosy"] + 1
-dfpartymatrix$designpartymetric[dfpartymatrix$style == "mixer"] <- 
-dfpartymatrix$designpartymetric[dfpartymatrix$style == "mixer"] + 3
-dfpartymatrix$designpartymetric[dfpartymatrix$style == "expansive"] <- dfpartymatrix$designpartymetric[dfpartymatrix$style == "expansive"] + 3
+
+##add leader metric
+dfpartymatrix$designleaderscore <- 0
+dfpartymatrix$designleaderscore[as.vector(adjacent_vertices(G.cr, 30, mode ="out")[[1]])] <- 1
 ```
 
 ```{r}
@@ -338,9 +347,10 @@ standardise <- function(x){(x-min(x))/(max(x)-min(x))}
 
 fr.btwn.centr <- as.numeric(betweenness(G))
 
-creativitymetric <- (standardise(fr.btwn.centr)*0.2 + 
-                       standardise(G.cr.degree)*0.6 +
-                      standardise(dfpartymatrix$designpartymetric)*0.2)/standardise(G.degree)
+creativitymetric <- (standardise(fr.btwn.centr)*0.15 + 
+                       standardise(G.cr.degree)*0.55 +
+                      standardise(dfpartymatrix$designpartymetric)*0.15 +
+                      dfpartymatrix$designleaderscore*0.15 )/standardise(G.degree)
 
 designtable <- data.frame(
           node   =order(creativitymetric, decreasing = TRUE),
@@ -364,20 +374,19 @@ dfpartymatrix$lobbypartymetric <- 0
 dfpartymatrix$lobbypartymetric[dfpartymatrix$guestlist == "exclusive"] <- 3
 dfpartymatrix$lobbypartymetric[dfpartymatrix$guestlist == "expansive"] <- 3
 dfpartymatrix$lobbypartymetric[dfpartymatrix$guestlist == "tight"] <- 1
-##add party size metrics
-dfpartymatrix$lobbypartymetric[dfpartymatrix$style == "cosy"] <- dfpartymatrix$lobbypartymetric[dfpartymatrix$style == "cosy"] + 1
-dfpartymatrix$lobbypartymetric[dfpartymatrix$style == "mixer"] <- 
-dfpartymatrix$lobbypartymetric[dfpartymatrix$style == "mixer"] + 2
-dfpartymatrix$lobbypartymetric[dfpartymatrix$style == "expansive"] <- dfpartymatrix$lobbypartymetric[dfpartymatrix$style == "expansive"] + 3
+
+##add leader metric
+dfpartymatrix$lobbyleaderscore <- 0
+dfpartymatrix$lobbyleaderscore[as.vector(adjacent_vertices(G.infl, 33, mode ="out")[[1]])] <- 1
 ```
 
 ```{r}
 fr.eign.centr <- as.numeric(eigen_centrality(G)$vector)
 
-influencemetric <- (standardise(fr.eign.centr)*0.4 + 
-                      standardise(G.infl.degree)*0.4 +
-                      standardise(dfpartymatrix$lobbypartymetric)*0.2
-                         )/standardise(G.degree)
+influencemetric <- (standardise(fr.eign.centr)*0.35 + 
+                      standardise(G.infl.degree)*0.35 +
+                      standardise(dfpartymatrix$lobbypartymetric)*0.15+
+                      dfpartymatrix$lobbyleaderscore*0.15)/standardise(G.degree)
 influencemetric[27] <- NaN
 
 
@@ -403,20 +412,19 @@ dfpartymatrix$implpartymetric <- 0
 dfpartymatrix$implpartymetric[dfpartymatrix$guestlist == "exclusive"] <- 2
 dfpartymatrix$implpartymetric[dfpartymatrix$guestlist == "expansive"] <- 1
 dfpartymatrix$implpartymetric[dfpartymatrix$guestlist == "tight"] <- 3
-##add party size metrics
-dfpartymatrix$implpartymetric[dfpartymatrix$style == "cosy"] <- dfpartymatrix$implpartymetric[dfpartymatrix$style == "cosy"] + 3
-dfpartymatrix$implpartymetric[dfpartymatrix$style == "mixer"] <- 
-dfpartymatrix$implpartymetric[dfpartymatrix$style == "mixer"] + 2
-dfpartymatrix$implpartymetric[dfpartymatrix$style == "expansive"] <- dfpartymatrix$implpartymetric[dfpartymatrix$style == "expansive"] + 1
+
+##add leader metric
+dfpartymatrix$implleaderscore <- 0
+dfpartymatrix$implleaderscore[as.vector(adjacent_vertices(G.imp, 19, mode ="out")[[1]])] <- 1
 ```
 
 ```{r}
 fr.cls.centr <- closeness(G)
 
-implementationmetric <- (standardise(fr.cls.centr)*0.2 +
-                         standardise(G.imp.degree)*0.6 +
-                         standardise(dfpartymatrix$implpartymetric)*0.2
-                         )/standardise(G.degree)
+implementationmetric <- (standardise(fr.cls.centr)*0.15 +
+                         standardise(G.imp.degree)*0.55 +
+                         standardise(dfpartymatrix$implpartymetric)*0.15 +
+                         dfpartymatrix$implleaderscore*0.15)/standardise(G.degree)
 implementationmetric[27] <- NaN
 
 impltable <- data.frame(
@@ -436,7 +444,7 @@ tabletoexport <- data.frame(
   creativitydegree = G.cr.degree,
   influencedegree = G.infl.degree,
   implementationdegree = G.imp.degree,
-  cluster = as.integer(V(G)$color),
+  cluster = com$membership,
 
   creativitymetric = creativitymetric*standardise(G.degree),
   scaledcreativitymetric = creativitymetric,
