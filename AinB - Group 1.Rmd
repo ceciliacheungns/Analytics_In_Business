@@ -196,7 +196,7 @@ jaccard.order$Z.score <- sapply(jaccard.order$Average, z.score, mean = mean.jacc
 
 ## Question 2: Cosine Similarity  
 
-Three different values were calculated for the similarities between Friendship-Creativity, Friendship-Influence, and Friendship-Implementation picks. The final score averages the three individual scores. The below graphs display the distribution of the average scores and the ranking of each individuals based on the scores (lower similarity score indicates higher flexibility).  
+Three different values were calculated for the similarities between Friendship-Creativity, Friendship-Influence, and Friendship-Implementation picks. The final score averages the three individual scores. The below graphs display the distribution of the average scores and the ranking of each individual based on the scores (lower similarity score indicates higher flexibility).  
 
 ```{r plot, echo=FALSE, warning = FALSE, fig.height = 8, fig.width = 15}
 
@@ -221,7 +221,7 @@ grid.arrange(histCos, barCos, ncol = 2)
 
 ```
 
-Below table shows the average similarity score and Z-score for each individual (order by similarity score).  
+Below table shows the average similarity score and Z-score for each individual (ordered by similarity score).  
 
 \footnotesize
 
@@ -562,7 +562,7 @@ G.infl.degree <- degree(G.infl, mode="in")
 
 ### Team Metric  
 
-The following measures have been used to construct the final metric for each tasks:  
+The following measures have been used to construct the final metric for each task:  
 
 * Party Type
 * Whether a candidate has been picked by team leader for the task
@@ -734,9 +734,9 @@ kable(rankingtable, caption = "Ranking of Individuals for the Three Tasks")
 
 ## Question 5 - Jaccard Similarity Coefficient  
 
-In Question 2, we compares two 60-element binary vectors. Each vector should have six 1s. From the below plot, we can see that cosine similarity grows linearly with the number of identical selection. In contrast, Jaccard similarity coefficient grows slower initially. As the number of identical selections gets larger, Jaccard Similarity increases at a faster rate.  
+In Question 2, we compared two 60-element binary vectors. Each vector should have six 1s. From the below plot, we can see that cosine similarity grows linearly with the number of identical selection. In contrast, Jaccard similarity coefficient grows slower initially. As the number of identical selections gets larger, Jaccard Similarity increases at a faster rate.  
 
-A person may know the strengths and weaknesses of his/her close friends better and a small number of identical selections may indicate thoughtfulness in selecting team members for different tasks. On the contrary, a person, who selected completely different team for each tasks, might have chosen his/her members in completely random fashion (without giving deep thoughts).  
+A person may know the strengths and weaknesses of his/her close friends better and a small number of identical selections may indicate thoughtfulness in selecting team members for different tasks. On the contrary, a person, who selected completely different team for each tasks, might have chosen his/her members in completely random fashion (without giving deep thought).  
 
 Compared to cosine similarity, Jaccard Similarity Coefficient punishes small number of identical selections lesser than large number of identical selections (since the likelihood of "inflexibility" goes up as number of identical selection increases). Hence Jaccard Similarity may be better suited for computing the average similarity score.  
 
