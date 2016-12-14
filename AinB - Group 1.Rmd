@@ -4,7 +4,6 @@ author: "Group 1"
 date: "13 Dec 2016"
 output:
   pdf_document: default
-  html_document: default
 ---
 
 ```{r setup, include=FALSE}
