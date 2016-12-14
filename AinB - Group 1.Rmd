@@ -18,6 +18,8 @@ library(gridExtra)
 library(plyr)
 library(igraph)
 library(stargazer)
+library(knitr)
+library(xlsx)
 ```
 
 ```{r echo=FALSE}
@@ -78,9 +80,7 @@ grid.arrange(densityFriends, densityCreative, densityInfluence, densityImplement
   
 The in-degree is a count data. Judging from the above density plots, we could use the discrete probability distribution (e.g. Poisson, Negative Binomial) for the regression model. An overdispersion test has been performed and there is evidence of overdispersion (i.e. mean is not equal to variance) in the data, especially for implementation network (P-Value < 0.01). Therefore, negative binomial regression will be a better fit.  
 
-\pagebreak
-
-The below three tables shows the regression results of the three networks:  
+The below three tables shows the regression results of the three networks. As seen from the tables, the in-degree of friendship network is very statistically significant. Hence higher popularity is expected to increase one's votes in the other three networks.  
 
 ```{r echo=FALSE, results = "asis"}
 
@@ -116,10 +116,6 @@ stargazer(list(fsIM.poi, fsIM.nb), type = "latex", style = "qje", digits = 3,
           dep.var.labels = "Implementation Network In-Degree", font.size = "footnotesize")
 
 ```
-
-\pagebreak
-
-As seen from the tables, the in-degree of friendship network is very statistically significant. Hence higher popularity is expected to increase one's chances in being picked for the other three networks.  
 
 ```{r echo=FALSE, warning = FALSE, fig.height = 8, fig.width = 15}
 # Function to compute Jaccard Similarity
@@ -196,6 +192,8 @@ cosine.order$Z.score <- sapply(cosine.order$Average, z.score, mean = mean.cosine
 jaccard.order$Z.score <- sapply(jaccard.order$Average, z.score, mean = mean.jaccard, sd = sd.jaccard)
 ```
 
+\pagebreak
+
 ## Question 2: Cosine Similarity  
 
 Three different values were calculated for the similarities between Friendship-Creativity, Friendship-Influence, and Friendship-Implementation picks. The final score averages the three individual scores. The below graphs display the distribution of the average scores and the ranking of each individuals based on the scores (lower similarity score indicates higher flexibility).  
@@ -222,8 +220,6 @@ barCos <-
 grid.arrange(histCos, barCos, ncol = 2)
 
 ```
-
-\pagebreak
 
 Below table shows the average similarity score and Z-score for each individual (order by similarity score).  
 
@@ -508,34 +504,245 @@ pander(implTop3, caption = "Top 3 Implementation Leader Candidates")
 
 ```
 
-## Question 4 - WIP
+\pagebreak
 
+## Question 4 - ID Rankings  
 
-## Question 5 - WIP  
+Firstly, let's look at the ranking of in-degree centrality of the three networks. They are divided by the in-degree of the friendship network to obtain the cost-benefit ratio. The below table ranks the nodes for each of the three networks (friendship in-degree of node #27 is zero, thus it is artifically set to 0.5 to avoid "zero-cost" circumstances) using this cost-benefit ratio.  
 
-In the context of the assignment, we are comparing a two 60-element binary vectors. Each vector should have six 1s. In this case, cosine similarity grows linearly with the number of identical selection. In contrast, Jaccard similarity coefficient grows slower with small number of identical selections. As the number of identical selections gets larger, Jaccard Similarity increases at a faster rate. From the plot, we can observe that Jaccard similarity is always smaller than cosine similarity.  
+\footnotesize
 
-Paccard similarity coefficient may be better for the purpose of leader selection. A person may know the strengths and weaknesses of his/her close friends better and a small number of identical selections may indicate thoughtfulness in selecting team members for different tasks. On the contrary, a person, who selected completely different team for each tasks, might have chosen his/her members in completely random fashion (without giving deep thoughts).  
+```{r inDegreeScore, echo = FALSE, fig.height = 8, fig.width = 15}
 
-Therefore, a better similarity measure should penalise small number of identical selections lesser than large number of identical selections (since the likelihood of "inflexibility" goes up as number of identical selection increases). Paccard similarity coefficient has this property.  
+fulldata <- picks.data
 
-```{r echo=FALSE, fig.width = 10, fig.align = "center"}
-# create bins in cosine.order
-cosine.order$bin <- cut(cosine.order$Average, breaks = 5, labels = c("(0,0.2]","(0.2,0.4]", "(0.4,0.6]","(0.6,0.8]","(0.8,1]"))
-jaccard.order$bin <- cut(jaccard.order$Average, breaks = 5, labels = c("(0,0.2]","(0.2,0.4]", "(0.4,0.6]","(0.6,0.8]","(0.8,1]"))
+dffrmatrix <- fulldata[,4:63]
+frmatrix <- as.matrix(dffrmatrix)
 
-# plot histogram of average cosine similarities
-ggplot(na.omit(cosine.order), aes(bin, fill = bin)) + 
-    geom_bar() + 
-    labs(x = "Cosine Similarity", y = "Count", title = "Average Cosine Similarity Frequency") + 
-    scale_fill_brewer(palette = "Blues", direction = -1, guide = FALSE)
+G <- graph_from_adjacency_matrix(frmatrix, mode = "directed", add.colnames = TRUE, diag = FALSE)
 
-ggplot(na.omit(jaccard.order), aes(bin, fill = bin)) + 
-    geom_bar() + 
-    labs(x = "Jaccard Similarity", y = "Count", title = "Average Jaccard Similarity Frequency") + 
-    scale_fill_brewer(palette = "Blues", direction = -1, guide = FALSE)
+G.degree <- degree(G, mode="in")
+set.seed(888)
+com <- cluster_infomap(G)
+G <- set_graph_attr(G, "layout", layout.fruchterman.reingold(G))
+nodes <- 1:60
+cluster1 <- nodes[com$membership == 1]
+cluster2 <- nodes[com$membership == 2]
+cluster3 <- nodes[com$membership == 3]
+cluster4 <- nodes[com$membership == 4]
+V(G)[cluster1]$color <- "#2DA5DB"
+V(G)[cluster2]$color <- "#37BDA7"
+V(G)[cluster3]$color <- "#E50328"
+V(G)[cluster4]$color <- "orchid4"
+
+dfcrmatrix <- fulldata[,124:183]
+crmatrix <- as.matrix(dfcrmatrix)
+G.cr <- graph_from_adjacency_matrix(crmatrix, mode = "directed", add.colnames = TRUE, diag = FALSE)
+G.cr.degree <- degree(G.cr, mode="in")
+
+dfimpmatrix <- fulldata[,184:243]
+impmatrix <- as.matrix(dfimpmatrix)
+G.imp <- graph_from_adjacency_matrix(impmatrix, mode = "directed", add.colnames = TRUE, diag = FALSE)
+G.imp.degree <- degree(G.imp, mode="in")
+
+dfinflmatrix <- fulldata[,244:303]
+inflmatrix <- as.matrix(dfinflmatrix)
+G.infl <- graph_from_adjacency_matrix(inflmatrix, mode = "directed", add.colnames = TRUE, diag = FALSE)
+G.infl.degree <- degree(G.infl, mode="in")
+
+G.degree[27] <- 0.5
+indegreetable <- data.frame(creativity = order(G.cr.degree / G.degree, decreasing = TRUE), 
+                            influence = order(G.infl.degree / G.degree, decreasing = TRUE),
+                            implementation = order(G.imp.degree / G.degree, decreasing = TRUE))
+
+rownames(indegreetable) <- 1:nrow(indegreetable)
+rownames(indegreetable)[1:3] <- c("1st", "2nd", "3rd")
+
+pander(indegreetable, caption = "Ranking of Nodes in terms of In-Degree Centrality")
 
 ```
+
+### Team Metric  
+
+The following measures have been used to construct the final metric for each tasks:  
+
+* Party Type
+* Whether a candidate has been voted by team leader for the tasks
+* Betweenness: High leverage (Design)
+* In-Degree of Creativity Network (Design)
+* Eigen Centrality: High influence (Lobbying)
+* In-Degree of Influence Network (Lobbying)
+* Closeness: High cohesion (Implementation)
+* In-Degree of Implementation Network (Implementation)
+
+The two tables below tabulate the weightings of the criterion used to construct the final metrics.  
+
+```{r TeamMetric, echo = FALSE}
+
+teamGuest <- data.frame(tasks = c("Design", "Lobbying", "Implementation"), 
+                          tight = c("L", "L", "H"), 
+                          exclusive = c("M", "H", "M"), 
+                          expansive = c("H", "H", "L"))
+
+colnames(teamGuest) <- c("Tasks", "Tight", "Exclusive", "Expansive")
+
+pander(teamGuest, caption = "Preferred Party Size for Team Selection (Weight = 0.15)")
+
+teamCriteria <- data.frame(tasks = c("Design", "Lobbying", "Implementation"), 
+                           leader = c("0.15", "0.15", "0.15"),
+                           betweenness = c("0.15", "0", "0"), 
+                           creativity = c("0.55", "0", "0"), 
+                           eigen = c("0", "0.35", "0"), 
+                           influence = c("0", "0.35", "0"), 
+                           closeness = c("0", "0", "0.15"), 
+                           implementation = c("0", "0", "0.55"))
+
+
+colnames(teamCriteria) <- c("Tasks", "Pick", "Betweenness", "Creativity", "Eigen", 
+                            "Infl", "Closeness", "Impl")
+
+pander(teamCriteria, caption = "Metric Weighting for Team Selection")
+
+```
+
+### Design Team Ranking  
+
+The ranking of the design team based on the new creativity metric is as below:  
+
+\footnotesize
+
+```{r DesignTeamRanking, echo = FALSE}
+dfpartymatrix <- fulldata[,1:3]
+levels(dfpartymatrix$style) <- c("cosy","mixer","party")
+levels(dfpartymatrix$guestlist) <- c("exclusive","expansive","tight")
+##define metric for design team based on party choices, from stage/style matrix in slides
+dfpartymatrix$designpartymetric <- 0
+##add party type metrics
+dfpartymatrix$designpartymetric[dfpartymatrix$guestlist == "exclusive"] <- 2
+dfpartymatrix$designpartymetric[dfpartymatrix$guestlist == "expansive"] <- 3
+dfpartymatrix$designpartymetric[dfpartymatrix$guestlist == "tight"] <- 1
+
+##add leader metric
+dfpartymatrix$designleaderscore <- 0
+dfpartymatrix$designleaderscore[as.vector(adjacent_vertices(G.cr, 30, mode ="out")[[1]])] <- 1
+standardise <- function(x){(x-min(x))/(max(x)-min(x))}
+
+fr.btwn.centr <- as.numeric(betweenness(G))
+
+creativitymetric <- (standardise(fr.btwn.centr)*0.15 + 
+                       standardise(G.cr.degree)*0.55 +
+                      standardise(dfpartymatrix$designpartymetric)*0.15 +
+                      dfpartymatrix$designleaderscore*0.15 )/standardise(G.degree)
+
+designtable <- data.frame(
+          node   =order(creativitymetric, decreasing = TRUE),
+          creativitymetric =creativitymetric[order(creativitymetric, decreasing=TRUE)],
+          creativitydegree =as.integer(G.cr.degree[order(creativitymetric, decreasing=TRUE)]),
+          frienddegree  =as.integer(G.degree[order(creativitymetric, decreasing=TRUE)]),
+          btwncentrality = fr.btwn.centr[order(creativitymetric, decreasing=TRUE)])
+
+colnames(designtable) <- c("ID", "Creativity Metric", "Creativity In-Degree", 
+                          "Friendship In-Degree", "Betweenness")
+
+kable(designtable)
+```
+
+### Lobbying Team Ranking  
+
+The ranking of the lobby team based on the new influence metric is as below:  
+
+\footnotesize
+
+```{r LobbyTeamRanking, echo = FALSE}
+dfpartymatrix$lobbypartymetric <- 0
+##add party type metrics
+dfpartymatrix$lobbypartymetric[dfpartymatrix$guestlist == "exclusive"] <- 3
+dfpartymatrix$lobbypartymetric[dfpartymatrix$guestlist == "expansive"] <- 3
+dfpartymatrix$lobbypartymetric[dfpartymatrix$guestlist == "tight"] <- 1
+
+##add leader metric
+dfpartymatrix$lobbyleaderscore <- 0
+dfpartymatrix$lobbyleaderscore[as.vector(adjacent_vertices(G.infl, 33, mode ="out")[[1]])] <- 1
+fr.eign.centr <- as.numeric(eigen_centrality(G)$vector)
+
+influencemetric <- (standardise(fr.eign.centr)*0.35 + 
+                      standardise(G.infl.degree)*0.35 +
+                      standardise(dfpartymatrix$lobbypartymetric)*0.15+
+                      dfpartymatrix$lobbyleaderscore*0.15)/standardise(G.degree)
+influencemetric[27] <- NaN
+
+
+lobbytable <- data.frame(
+          node   =order(influencemetric, decreasing = TRUE),
+          influencemetric =influencemetric[order(influencemetric, decreasing=TRUE)],
+          influencedegree =as.integer(G.infl.degree[order(influencemetric, decreasing=TRUE)]),
+          frienddegree  =as.integer(G.degree[order(influencemetric, decreasing=TRUE)]),
+          eigncentrality = fr.eign.centr[order(influencemetric, decreasing=TRUE)])
+
+colnames(lobbytable) <- c("ID", "Influence Metric", "Influence In-Degree", 
+                          "Friendship In-Degree", "Eigen Centrality")
+
+kable(lobbytable)
+```
+
+### Implementation Team Ranking  
+
+The ranking of the implementation team based on the new implementation metric is as below:  
+
+\footnotesize
+
+```{r ImplTeamRanking, echo = FALSE}
+dfpartymatrix$implpartymetric <- 0
+##add party type metrics
+dfpartymatrix$implpartymetric[dfpartymatrix$guestlist == "exclusive"] <- 2
+dfpartymatrix$implpartymetric[dfpartymatrix$guestlist == "expansive"] <- 1
+dfpartymatrix$implpartymetric[dfpartymatrix$guestlist == "tight"] <- 3
+
+##add leader metric
+dfpartymatrix$implleaderscore <- 0
+dfpartymatrix$implleaderscore[as.vector(adjacent_vertices(G.imp, 19, mode ="out")[[1]])] <- 1
+fr.cls.centr <- closeness(G)
+
+implementationmetric <- (standardise(fr.cls.centr)*0.15 +
+                         standardise(G.imp.degree)*0.55 +
+                         standardise(dfpartymatrix$implpartymetric)*0.15 +
+                         dfpartymatrix$implleaderscore*0.15)/standardise(G.degree)
+implementationmetric[27] <- NaN
+
+impltable <- data.frame(
+          node   =order(implementationmetric, decreasing = TRUE),
+          implementationmetric =implementationmetric[order(implementationmetric, decreasing=TRUE)],
+          implementationdegree =as.integer(G.infl.degree[order(implementationmetric, decreasing=TRUE)]),
+          frienddegree  =as.integer(G.degree[order(implementationmetric, decreasing=TRUE)]),
+          closenesscentrality = fr.cls.centr[order(implementationmetric, decreasing=TRUE)])
+
+colnames(impltable) <- c("ID", "Implementation Metric", "Implementation In-Degree", 
+                         "Friendship In-Degree", "Closeness Centrality")
+
+kable(impltable)
+```
+
+### Communities  
+
+Based on the Friendship network, four communities have been identified. To ensure sufficient diversity in each team, Design and Lobby teams must not have more than 2 members from the same community, while for Implementation team the limit is 3 members from the same community.  
+
+```{r Communities, echo = FALSE, fig.align="center"}
+
+plot(G, vertex.size = (log(G.degree))*5 + 5, edge.arrow.size = 0.2, edge.width = 0.2, vertex.label.cex = 0.42, 
+     vertex.label.color = "white", vertex.label.family = "sans", edge.curved = TRUE, 
+     sub = "Four Communities in Friendship Network")
+
+```
+
+\pagebreak
+
+## Question 5 - Jaccard Similarity Coefficient  
+
+In Question 2, we compares two 60-element binary vectors. Each vector should have six 1s. From the below plot, we can see that cosine similarity grows linearly with the number of identical selection. In contrast, Jaccard similarity coefficient grows slower initially. As the number of identical selections gets larger, Jaccard Similarity increases at a faster rate. Jaccard similarity is always smaller than cosine similarity.  
+
+A person may know the strengths and weaknesses of his/her close friends better and a small number of identical selections may indicate thoughtfulness in selecting team members for different tasks. On the contrary, a person, who selected completely different team for each tasks, might have chosen his/her members in completely random fashion (without giving deep thoughts).  
+
+Compared to cosine similarity, Jaccard Similarity Coefficient punishes small number of identical selections lesser than large number of identical selections (since the likelihood of "inflexibility" goes up as number of identical selection increases). Hence Jaccard Similarity may be better suited for computing the average similarity score.  
 
 ```{r echo=FALSE, fig.align="center"}
 
@@ -546,10 +753,25 @@ plotDF <- data.frame(x = 0:6,
 ggplot(data = plotDF, aes(x = x)) + 
     geom_line(aes(y = cosine, colour = 'b')) + 
     geom_line(aes(y = jaccard, colour = 'r')) + 
-    labs(x = "Number of Identical Selections", y = "Similarity Measure") + 
+    labs(x = "Number of Identical Selections", y = "Similarity Measure", 
+         title = "Value of Cosine and Jaccard Similarity") + 
     scale_x_continuous(breaks = 0:6) + 
-    scale_colour_discrete(name = "Similarity", breaks = c('b', 'r'), labels = c("Cosine", "Jaccard"))
+    scale_colour_discrete(name = "Similarity", breaks = c('b', 'r'), labels = c("Cosine", "Jaccard")) +
+    theme_bw()
+    
+```
 
+```{r echo=FALSE, fig.align="center", fig.height = 8, fig.width = 15}
+
+barJac <-
+    ggplot(na.omit(jaccard.order), aes(y = Average, x = reorder(factor(id), Average))) +
+    geom_bar(stat = "identity", width = .75, colour = "black", fill = "lightgreen", alpha = .75) +
+    scale_y_continuous(breaks = seq(0, 1, .1)) +
+    labs(y = "Jaccard similarity", x = "ID", title = "Ranking of Jaccard Similarity") +
+    coord_flip() +
+    theme_bw()
+
+grid.arrange(barCos, barJac, ncol = 2)
 
 ```
 
