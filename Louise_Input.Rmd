@@ -554,6 +554,18 @@ tabletoexport <- data.frame(
 write.xlsx(tabletoexport, "AinBOptimisationdata.xlsx")
 ```
 
+
+```{r}
+dataforspiderdiagrams <- data.frame(
+  node = 1:60,
+  creativitydegree = G.cr.degree,
+  influencedegree = G.infl.degree,
+  implementationdegree = G.imp.degree,
+  betweennesscentrality =fr.btwn.centr,
+  eigenvectorcentrality =fr.eign.centr,
+  closenesscentrality =fr.cls.centr )
+```
+
 ##Notes
 
 * tkplot doesn't work well on mac computers (requires Xquartz and loads the graph outside of the file.)
@@ -561,3 +573,338 @@ write.xlsx(tabletoexport, "AinBOptimisationdata.xlsx")
 * louvain community detection only works for undirected graphs (same with fast_greedy)
 * There are no maximally connected cliques of 6
 * layout_with_kk makes a nice layout, but layout.fruchterman.reingold puts the clusters together nicely.
+
+```{r Spider Charts}
+for (i in 2:7){
+    dataforspiderdiagrams[, i] <- standardise(dataforspiderdiagrams[, i])
+}
+
+colnames(dataforspiderdiagrams) <- c("id", "Creativity", "Influence", "Implementation",
+                                     "Leverage", "Importance", "Cohesion")
+
+minmax <- data.frame("Influence" = c(1, 0),
+                     "Implementation" = c(1, 0),
+                     "Creativity" = c(1, 0),
+                     "Importance" = c(1, 0),
+                     "Cohesion" = c(1, 0),
+                     "Leverage" = c(1, 0))
+                     
+avg <- data.frame("Influence" = mean(dataforspiderdiagrams[, 3]),
+                  "Implementation" = mean(dataforspiderdiagrams[, 4]),
+                  "Creativity" = mean(dataforspiderdiagrams[, 2]),
+                  "Importance" = mean(dataforspiderdiagrams[, 6]),
+                  "Cohesion" = mean(dataforspiderdiagrams[, 7]),
+                  "Leverage" = mean(dataforspiderdiagrams[, 5]))
+
+
+colnames(minmax) <- c("Influence", "Implementation", "Creativity",
+                      "Importance", "Cohesion", "Leverage")
+
+colnames(avg) <- c("Influence", "Implementation", "Creativity",
+                      "Importance", "Cohesion", "Leverage")
+
+# Implementation team
+# 19
+t1 <- rbind(minmax, dataforspiderdiagrams[dataforspiderdiagrams[, "id"] == 19, 2:7], avg)
+radarchart(t1,
+           pty = 32,
+           axistype = 0,
+           pcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("black", 0.3)),
+           pfcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("white", 0.0)),
+           plty = 1, plwd = 5,
+           cglty = 1, cglcol = "gray78",
+           centerzero = TRUE,
+           seg = 5,
+           vlcex = 0.75,
+           palcex = 0.75)
+
+# 1
+t1 <- rbind(minmax, dataforspiderdiagrams[dataforspiderdiagrams[, "id"] == 1, 2:7], avg)
+radarchart(t1,
+           pty = 32,
+           axistype = 0,
+           pcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("black", 0.3)),
+           pfcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("white", 0.0)),
+           plty = 1, plwd = 5,
+           cglty = 1, cglcol = "gray78",
+           centerzero = TRUE,
+           seg = 5,
+           vlcex = 0.75,
+           palcex = 0.75)
+
+# 18
+t1 <- rbind(minmax, dataforspiderdiagrams[dataforspiderdiagrams[, "id"] == 18, 2:7], avg)
+radarchart(t1,
+           pty = 32,
+           axistype = 0,
+           pcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("black", 0.3)),
+           pfcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("white", 0.0)),
+           plty = 1, plwd = 5,
+           cglty = 1, cglcol = "gray78",
+           centerzero = TRUE,
+           seg = 5,
+           vlcex = 0.75,
+           palcex = 0.75)
+
+# 22
+t1 <- rbind(minmax, dataforspiderdiagrams[dataforspiderdiagrams[, "id"] == 22, 2:7], avg)
+radarchart(t1,
+           pty = 32,
+           axistype = 0,
+           pcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("black", 0.3)),
+           pfcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("white", 0.0)),
+           plty = 1, plwd = 5,
+           cglty = 1, cglcol = "gray78",
+           centerzero = TRUE,
+           seg = 5,
+           vlcex = 0.75,
+           palcex = 0.75)
+
+# 42
+t1 <- rbind(minmax, dataforspiderdiagrams[dataforspiderdiagrams[, "id"] == 42, 2:7], avg)
+radarchart(t1,
+           pty = 32,
+           axistype = 0,
+           pcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("black", 0.3)),
+           pfcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("white", 0.0)),
+           plty = 1, plwd = 5,
+           cglty = 1, cglcol = "gray78",
+           centerzero = TRUE,
+           seg = 5,
+           vlcex = 0.75,
+           palcex = 0.75)
+
+
+
+# Lobby team
+# 33
+t1 <- rbind(minmax, dataforspiderdiagrams[dataforspiderdiagrams[, "id"] == 33, 2:7], avg)
+radarchart(t1,
+           pty = 32,
+           axistype = 0,
+           pcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("black", 0.3)),
+           pfcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("white", 0.0)),
+           plty = 1, plwd = 5,
+           cglty = 1, cglcol = "gray78",
+           centerzero = TRUE,
+           seg = 5,
+           vlcex = 0.75,
+           palcex = 0.75)
+
+# 11
+t1 <- rbind(minmax, dataforspiderdiagrams[dataforspiderdiagrams[, "id"] == 11, 2:7], avg)
+radarchart(t1,
+           pty = 32,
+           axistype = 0,
+           pcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("black", 0.3)),
+           pfcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("white", 0.0)),
+           plty = 1, plwd = 5,
+           cglty = 1, cglcol = "gray78",
+           centerzero = TRUE,
+           seg = 5,
+           vlcex = 0.75,
+           palcex = 0.75)
+
+# 23
+t1 <- rbind(minmax, dataforspiderdiagrams[dataforspiderdiagrams[, "id"] == 23, 2:7], avg)
+radarchart(t1,
+           pty = 32,
+           axistype = 0,
+           pcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("black", 0.3)),
+           pfcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("white", 0.0)),
+           plty = 1, plwd = 5,
+           cglty = 1, cglcol = "gray78",
+           centerzero = TRUE,
+           seg = 5,
+           vlcex = 0.75,
+           palcex = 0.75)
+
+# 28
+t1 <- rbind(minmax, dataforspiderdiagrams[dataforspiderdiagrams[, "id"] == 28, 2:7], avg)
+radarchart(t1,
+           pty = 32,
+           axistype = 0,
+           pcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("black", 0.3)),
+           pfcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("white", 0.0)),
+           plty = 1, plwd = 5,
+           cglty = 1, cglcol = "gray78",
+           centerzero = TRUE,
+           seg = 5,
+           vlcex = 0.75,
+           palcex = 0.75)
+
+# 34
+t1 <- rbind(minmax, dataforspiderdiagrams[dataforspiderdiagrams[, "id"] == 34, 2:7], avg)
+radarchart(t1,
+           pty = 32,
+           axistype = 0,
+           pcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("black", 0.3)),
+           pfcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("white", 0.0)),
+           plty = 1, plwd = 5,
+           cglty = 1, cglcol = "gray78",
+           centerzero = TRUE,
+           seg = 5,
+           vlcex = 0.75,
+           palcex = 0.75)
+
+
+
+# Design team
+# 30
+t1 <- rbind(minmax, dataforspiderdiagrams[dataforspiderdiagrams[, "id"] == 30, 2:7], avg)
+radarchart(t1,
+           pty = 32,
+           axistype = 0,
+           pcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("black", 0.3)),
+           pfcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("white", 0.0)),
+           plty = 1, plwd = 5,
+           cglty = 1, cglcol = "gray78",
+           centerzero = TRUE,
+           seg = 5,
+           vlcex = 0.75,
+           palcex = 0.75)
+
+# 49
+t1 <- rbind(minmax, dataforspiderdiagrams[dataforspiderdiagrams[, "id"] == 49, 2:7], avg)
+radarchart(t1,
+           pty = 32,
+           axistype = 0,
+           pcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("black", 0.3)),
+           pfcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("white", 0.0)),
+           plty = 1, plwd = 5,
+           cglty = 1, cglcol = "gray78",
+           centerzero = TRUE,
+           seg = 5,
+           vlcex = 0.75,
+           palcex = 0.75)
+
+# 50
+t1 <- rbind(minmax, dataforspiderdiagrams[dataforspiderdiagrams[, "id"] == 50, 2:7], avg)
+radarchart(t1,
+           pty = 32,
+           axistype = 0,
+           pcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("black", 0.3)),
+           pfcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("white", 0.0)),
+           plty = 1, plwd = 5,
+           cglty = 1, cglcol = "gray78",
+           centerzero = TRUE,
+           seg = 5,
+           vlcex = 0.75,
+           palcex = 0.75)
+
+# 51
+t1 <- rbind(minmax, dataforspiderdiagrams[dataforspiderdiagrams[, "id"] == 51, 2:7], avg)
+radarchart(t1,
+           pty = 32,
+           axistype = 0,
+           pcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("black", 0.3)),
+           pfcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("white", 0.0)),
+           plty = 1, plwd = 5,
+           cglty = 1, cglcol = "gray78",
+           centerzero = TRUE,
+           seg = 5,
+           vlcex = 0.75,
+           palcex = 0.75)
+
+# 57
+t1 <- rbind(minmax, dataforspiderdiagrams[dataforspiderdiagrams[, "id"] == 57, 2:7], avg)
+radarchart(t1,
+           pty = 32,
+           axistype = 0,
+           pcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("black", 0.3)),
+           pfcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("white", 0.0)),
+           plty = 1, plwd = 5,
+           cglty = 1, cglcol = "gray78",
+           centerzero = TRUE,
+           seg = 5,
+           vlcex = 0.75,
+           palcex = 0.75)
+
+### TEAM MEANS
+
+# Implementation team
+# mean
+ids <- c(19, 1, 18, 22, 42)
+df1 <- dataforspiderdiagrams[ids, 2:7]
+avg1 <- data.frame("Influence" = mean(df1[, 2]),
+                  "Implementation" = mean(df1[, 3]),
+                  "Creativity" = mean(df1[, 1]),
+                  "Importance" = mean(df1[, 5]),
+                  "Cohesion" = mean(df1[, 6]),
+                  "Leverage" = mean(df1[, 4]))
+                  
+colnames(avg1) <- c("Influence", "Implementation", "Creativity",
+                      "Importance", "Cohesion", "Leverage")
+
+t1 <- rbind(minmax, avg1, avg)
+radarchart(t1,
+           pty = 32,
+           axistype = 0,
+           pcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("black", 0.3)),
+           pfcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("white", 0.0)),
+           plty = 1, plwd = 5,
+           cglty = 1, cglcol = "gray78",
+           centerzero = TRUE,
+           seg = 5,
+           vlcex = 0.75,
+           palcex = 0.75)
+
+
+
+# Lobby team
+# mean
+ids <- c(33, 11, 23, 28, 34)
+df1 <- dataforspiderdiagrams[ids, 2:7]
+avg1 <- data.frame("Influence" = mean(df1[, 2]),
+                  "Implementation" = mean(df1[, 3]),
+                  "Creativity" = mean(df1[, 1]),
+                  "Importance" = mean(df1[, 5]),
+                  "Cohesion" = mean(df1[, 6]),
+                  "Leverage" = mean(df1[, 4]))
+                  
+colnames(avg1) <- c("Influence", "Implementation", "Creativity",
+                      "Importance", "Cohesion", "Leverage")
+
+t1 <- rbind(minmax, avg1, avg)
+radarchart(t1,
+           pty = 32,
+           axistype = 0,
+           pcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("black", 0.3)),
+           pfcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("white", 0.0)),
+           plty = 1, plwd = 5,
+           cglty = 1, cglcol = "gray78",
+           centerzero = TRUE,
+           seg = 5,
+           vlcex = 0.75,
+           palcex = 0.75)
+
+# Design team
+# mean
+ids <- c(30, 49, 50, 51, 57)
+df1 <- dataforspiderdiagrams[ids, 2:7]
+avg1 <- data.frame("Influence" = mean(df1[, 2]),
+                  "Implementation" = mean(df1[, 3]),
+                  "Creativity" = mean(df1[, 1]),
+                  "Importance" = mean(df1[, 5]),
+                  "Cohesion" = mean(df1[, 6]),
+                  "Leverage" = mean(df1[, 4]))
+                  
+colnames(avg1) <- c("Influence", "Implementation", "Creativity",
+                      "Importance", "Cohesion", "Leverage")
+
+t1 <- rbind(minmax, avg1, avg)
+radarchart(t1,
+           pty = 32,
+           axistype = 0,
+           pcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("black", 0.3)),
+           pfcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("white", 0.0)),
+           plty = 1, plwd = 5,
+           cglty = 1, cglcol = "gray78",
+           centerzero = TRUE,
+           seg = 5,
+           vlcex = 0.75,
+           palcex = 0.75)
+
+
+
+```
