@@ -442,6 +442,8 @@ summarytable01 <- summarytable01[order(summarytable01$total.rank, decreasing=FAL
 
 print(summarytable01)
 
+write.csv(summarytable01, "lobbying.csv")
+
  
 ```
 
@@ -493,6 +495,9 @@ summarytable11[,"total.rank"] <-rank(summarytable11[,"total"], ties.method = "mi
 summarytable11 <- summarytable11[order(summarytable11$total.rank, decreasing=FALSE), ]
 
 print(summarytable11)
+
+write.csv(summarytable11, "creativity.csv")
+
 
 ```
 
@@ -550,8 +555,95 @@ summarytable21 <- summarytable21[order(summarytable21$total.rank, decreasing=FAL
 
 print(summarytable21)
 
+write.csv(summarytable21, "implementation.csv")
+
 ```
 
+```{r}
+
+library(fmsb)
+library(dplyr)
+library(tibble)
+library(stringr)
+library(ggplot2)
+library(grid)
+library(gridBase)
+library(scales)
+
+df <- data.frame(id = cosine.order[, "id"], 
+                 Influence = influencetr[, "Total"] / max(influencetr[, "Total"]), 
+                 Implementation = implementationtr[, "Total"] / max(implementationtr[, "Total"]), 
+                 Creativity = creativitytr[, "Total"] / max(creativitytr[, "Total"]),
+                 Friends = friendstr[, "Total"] / max(friendstr[, "Total"]), 
+                 Advice = advicetr[, "Total"] / max(advicetr[, "Total"]), 
+                 Flexibility = 1 - cosine.order[, "Average"])
+
+df_mean <- data.frame(Influence = mean(influencetr[, "Total"] / max(influencetr[, "Total"])), 
+                 Implementation = mean(implementationtr[, "Total"] / max(implementationtr[, "Total"])), 
+                 Creativity = mean(creativitytr[, "Total"] / max(creativitytr[, "Total"])),
+                 Friends = mean(friendstr[, "Total"] / max(friendstr[, "Total"])), 
+                 Advice = mean(advicetr[, "Total"] / max(advicetr[, "Total"])), 
+                 Flexibility = mean(1 - cosine.order[, "Average"], na.rm = TRUE))
+
+minmax <- data.frame(Influence = c(1, 0),
+                     Implementation = c(1, 0),
+                     Creativity = c(1, 0),
+                     Advice = c(1, 0),
+                     Flexibility = c(1, 0),
+                     Friends = c(1, 0))
+
+# Creativity - 30
+t1 <- rbind(minmax, df[df[, "id"] == 30, 2:7], df_mean)
+
+radarchart(t1,
+           pty = 32,
+           axistype = 0,
+           pcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("black", 0.3)),
+           pfcol = c(adjustcolor("#37BDA7", 0.5)),
+           plty = 1, plwd = 5,
+           cglty = 1, cglcol = "gray78",
+           centerzero = TRUE,
+           seg = 5,
+           vlcex = 0.75,
+           palcex = 0.75)
+
+
+# Lobbying - 33
+t1 <- rbind(minmax, df[df[, "id"] == 33, 2:7], df_mean)
+
+radarchart(t1,
+           pty = 32,
+           axistype = 0,
+           pcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("black", 0.3)),
+           pfcol = c(adjustcolor("#37BDA7", 0.5)),
+           plty = 1, plwd = 5,
+           cglty = 1, cglcol = "gray78",
+           centerzero = TRUE,
+           seg = 5,
+           vlcex = 0.75,
+           palcex = 0.75)
+
+
+# Influence - 19
+t1 <- rbind(minmax, df[df[, "id"] == 19, 2:7], df_mean)
+
+radarchart(t1,
+           pty = 32,
+           axistype = 0,
+           pcol = c(adjustcolor("#37BDA7", 0.5), adjustcolor("black", 0.3)),
+           pfcol = c(adjustcolor("#37BDA7", 0.5)),
+           plty = 1, plwd = 5,
+           cglty = 1, cglcol = "gray78",
+           centerzero = TRUE,
+           seg = 5,
+           vlcex = 0.75,
+           palcex = 0.75)
+
+# Write data
+write.csv(df, "all_attributes.csv")
+
+
+```
 
 
 
