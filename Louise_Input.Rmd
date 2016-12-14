@@ -554,6 +554,18 @@ tabletoexport <- data.frame(
 write.xlsx(tabletoexport, "AinBOptimisationdata.xlsx")
 ```
 
+
+```{r}
+dataforspiderdiagrams <- data.frame(
+  node = 1:60,
+  creativitydegree = G.cr.degree,
+  influencedegree = G.infl.degree,
+  implementationdegree = G.imp.degree,
+  betweennesscentrality =fr.btwn.centr,
+  eigenvectorcentrality =fr.eign.centr,
+  closenesscentrality =fr.cls.centr )
+```
+
 ##Notes
 
 * tkplot doesn't work well on mac computers (requires Xquartz and loads the graph outside of the file.)
