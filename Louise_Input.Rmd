@@ -128,6 +128,101 @@ V(G)[cluster4]$color <- "orchid4"
 plot(G, vertex.size=(log(G.degree))*5+5, edge.arrow.size=0.2, edge.width=0.2, vertex.label.cex=0.42, vertex.label.color="white", vertex.label.family="Helvetica", edge.curved=TRUE)
 ```
 
+##Teams
+
+Design Team
+```{r}
+
+G.degree <- degree(G, mode="in")
+set.seed(888)
+com <- cluster_infomap(G)
+G <- set_graph_attr(G, "layout", layout.fruchterman.reingold(G))
+nodes <- 1:60
+team.design <- nodes[c(30, 49, 50, 51, 57)]
+
+cluster1 <- nodes[com$membership == 1]
+cluster2 <- nodes[com$membership == 2]
+cluster3 <- nodes[com$membership == 3]
+cluster4 <- nodes[com$membership == 4]
+V(G)$frame.color <- "white"
+V(G)$label.color <- "#fefefe"
+
+V(G)[team.design]$frame.color <- "black"
+V(G)[team.design]$label.font <- 2
+V(G)[team.design]$label.color <- "white"
+
+V(G)[cluster1]$color <- "#D9F2FE" #blue
+V(G)[cluster2]$color <- "#DEF4F1" #green
+V(G)[cluster3]$color <- "#F5E0E3" #red
+V(G)[cluster4]$color <- "#F7DEF7" #purple
+
+V(G)[cluster1[cluster1 %in% team.design]]$color <- "#2DA5DB"
+V(G)[cluster2[cluster2 %in% team.design]]$color <- "#37BDA7"
+V(G)[cluster3[cluster3 %in% team.design]]$color <- "#E50328"
+V(G)[cluster4[cluster4 %in% team.design]]$color <- "orchid4"
+
+plot(G, vertex.size=(log(G.degree))*5+5, edge.arrow.size=0.2, edge.width=0.2, vertex.label.cex=0.42, edge.color="lightgray", vertex.label.family="Helvetica", edge.curved=TRUE)
+```
+
+Lobbying team
+
+```{r}
+set.seed(888)
+nodes <- 1:60
+team.lobby <- nodes[c(33,11,23,28,34)]
+cluster1 <- nodes[com$membership == 1]
+cluster2 <- nodes[com$membership == 2]
+cluster3 <- nodes[com$membership == 3]
+cluster4 <- nodes[com$membership == 4]
+V(G)$frame.color <- "white"
+V(G)$label.color <- "#fefefe"
+
+V(G)[team.lobby]$frame.color <- "black"
+V(G)[team.lobby]$label.font <- 2
+V(G)[team.lobby]$label.color <- "white"
+
+V(G)[cluster1]$color <- "#D9F2FE" #blue
+V(G)[cluster2]$color <- "#DEF4F1" #green
+V(G)[cluster3]$color <- "#F5E0E3" #red
+V(G)[cluster4]$color <- "#F7DEF7" #purple
+
+V(G)[cluster1[cluster1 %in% team.lobby]]$color <- "#2DA5DB"
+V(G)[cluster2[cluster2 %in% team.lobby]]$color <- "#37BDA7"
+V(G)[cluster3[cluster3 %in% team.lobby]]$color <- "#E50328"
+V(G)[cluster4[cluster4 %in% team.lobby]]$color <- "orchid4"
+
+plot(G, vertex.size=(log(G.degree))*5+5, edge.arrow.size=0.2, edge.width=0.2, vertex.label.cex=0.42, edge.color="lightgray", vertex.label.family="Helvetica", edge.curved=TRUE)
+```
+
+Implementation Team
+```{r}
+set.seed(888)
+nodes <- 1:60
+team.impl <- nodes[c(19,1,18,22,42)]
+cluster1 <- nodes[com$membership == 1]
+cluster2 <- nodes[com$membership == 2]
+cluster3 <- nodes[com$membership == 3]
+cluster4 <- nodes[com$membership == 4]
+V(G)$frame.color <- "white"
+V(G)$label.color <- "#fefefe"
+
+V(G)[team.impl]$frame.color <- "black"
+V(G)[team.impl]$label.font <- 2
+V(G)[team.impl]$label.color <- "white"
+
+V(G)[cluster1]$color <- "#D9F2FE" #blue
+V(G)[cluster2]$color <- "#DEF4F1" #green
+V(G)[cluster3]$color <- "#F5E0E3" #red
+V(G)[cluster4]$color <- "#F7DEF7" #purple
+
+V(G)[cluster1[cluster1 %in% team.impl]]$color <- "#2DA5DB"
+V(G)[cluster2[cluster2 %in% team.impl]]$color <- "#37BDA7"
+V(G)[cluster3[cluster3 %in% team.impl]]$color <- "#E50328"
+V(G)[cluster4[cluster4 %in% team.impl]]$color <- "orchid4"
+
+plot(G, vertex.size=(log(G.degree))*5+5, edge.arrow.size=0.2, edge.width=0.2, vertex.label.cex=0.42, edge.color="lightgray", vertex.label.family="Helvetica", edge.curved=TRUE)
+```
+
 ##Cliques
 
 ```{r warning=FALSE}
