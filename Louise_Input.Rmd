@@ -372,7 +372,7 @@ For the **Lobbying** team it would be useful to have:
 dfpartymatrix$lobbypartymetric <- 0
 ##add party type metrics
 dfpartymatrix$lobbypartymetric[dfpartymatrix$guestlist == "exclusive"] <- 3
-dfpartymatrix$lobbypartymetric[dfpartymatrix$guestlist == "expansive"] <- 3
+dfpartymatrix$lobbypartymetric[dfpartymatrix$guestlist == "expansive"] <- 2
 dfpartymatrix$lobbypartymetric[dfpartymatrix$guestlist == "tight"] <- 1
 
 ##add leader metric
