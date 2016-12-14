@@ -4,7 +4,6 @@ author: "Group 1"
 date: "13 Dec 2016"
 output:
   pdf_document: default
-  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -78,7 +77,7 @@ grid.arrange(densityFriends, densityCreative, densityInfluence, densityImplement
 
 ```
   
-The in-degree is a count data. Judging from the above density plots, we could use the discrete probability distribution (e.g. Poisson, Negative Binomial) for the regression model. An overdispersion test has been performed and there is evidence of overdispersion (i.e. mean is not equal to variance) in the data, especially for implementation network (P-Value < 0.01). Therefore, negative binomial regression will be a better fit.  
+Since in-degree is a count data, we could use the discrete probability distribution (e.g. Poisson, Negative Binomial) for the regression model. An overdispersion test has been performed and there is evidence of overdispersion (i.e. mean is not equal to variance) in the data, especially for implementation network (P-Value < 0.01). Therefore, negative binomial regression will be a better fit.  
 
 The below three tables shows the regression results of the three networks. As seen from the tables, the in-degree of friendship network is very statistically significant. Hence higher popularity is expected to increase the votes one receives in the other three networks.  
 
@@ -248,7 +247,7 @@ pander(cosine.table, caption = "Average Cosine Similarity Score Ranking")
 
 ![People-Picking for Projects](PeoplePickingGrid.png)
 
-With reference to the above framework, the leader for each task must have the guestlist listed in below table:  
+With reference to the above framework, the leader for each task must have the party type listed in below table:  
 
 ```{r echo = FALSE}
 leaderCriteria <- data.frame(tasks = c("Design", "Lobbying", "Implementation"), 
@@ -267,7 +266,7 @@ pander(leaderCriteria[ , 1:2], caption = "Guest List Criteria for Each Leder")
 
 ```
 
-To select the best leader, the in-degree centrality scores from each category are weighted according their respective importance in each task. The detailed weightings is tabulated in the below table.  
+To select the best leader, the in-degree centrality scores from each category are weighted according their respective importance in each task. The detailed weightings are tabulated below.  
 
 ```{r echo = FALSE}
 pander(leaderCriteria[ , -2], caption = "Weighting Each Score for Leader Selection")
@@ -338,6 +337,8 @@ cosine.order[,"average.cs.rank"] <- rank(cosine.order[,"Average"], ties.method =
 cosine.order <- cosine.order[order(cosine.order$id, decreasing=FALSE), ]
 
 ```
+
+\pagebreak
 
 ### Lobbying Leader  
 
@@ -566,12 +567,12 @@ The following measures have been used to construct the final metric for each tas
 
 * Party Type
 * Whether a candidate has been picked by team leader for the task
-* Betweenness: Indicates information flow (Design)
-* In-Degree of Creativity Network: Perceived Creativity (Design)
-* Eigenvector Centrality: Indicates influence (Lobbying)
-* In-Degree of Influence Network: Perceived Influence (Lobbying)
-* Closeness: Indicates cohesiveness (Implementation)
-* In-Degree of Implementation Network: Perceived Execution Skills (Implementation)
+* (Design) Betweenness: Indicates information flow
+* (Design) In-Degree of Creativity Network: Perceived creativity
+* (Lobbying) Eigenvector Centrality: Indicates influence
+* (Lobbying) In-Degree of Influence Network: Perceived influence
+* (Implementation) Closeness: Indicates cohesiveness
+* (Implementation) In-Degree of Implementation Network: Perceived execution skills
 
 The two tables below tabulate the weightings of the criteria used to construct the final metrics. The final metric is then divided by the in-degree of the friendship network.  
 
@@ -736,9 +737,9 @@ kable(rankingtable, caption = "Ranking of Individuals for the Three Tasks")
 
 In Question 2, we compared two 60-element binary vectors. Each vector should have six 1s. From the below plot, we can see that cosine similarity grows linearly with the number of identical selection. In contrast, Jaccard similarity coefficient grows slower initially. As the number of identical selections gets larger, Jaccard Similarity increases at a faster rate.  
 
-A person may know the strengths and weaknesses of his/her close friends better and a small number of identical selections may indicate thoughtfulness in selecting team members for different tasks. On the contrary, a person, who selected completely different team for each tasks, might have chosen his/her members in completely random fashion (without giving deep thought).  
+A person may know the strengths and weaknesses of his/her close friends better and a small number of identical selections may indicate thoughtfulness in selecting team members for different tasks. On the contrary, a person, who selected completely different team for each tasks, might have picked in completely random fashion (without giving deep thought).  
 
-Compared to cosine similarity, Jaccard Similarity Coefficient punishes small number of identical selections lesser than large number of identical selections (since the likelihood of "inflexibility" goes up as number of identical selection increases). Hence Jaccard Similarity may be better suited for computing the average similarity score.  
+Compared to cosine similarity, Jaccard Similarity Coefficient punishes small number of identical selections much lesser than large number of identical selections (since the likelihood of "inflexibility" goes up exponentially as the number of identical selection increases). Hence Jaccard Similarity may be better suited for computing the average similarity score.  
 
 ```{r echo=FALSE, fig.align="center"}
 
@@ -756,6 +757,10 @@ ggplot(data = plotDF, aes(x = x)) +
     theme_bw()
     
 ```
+
+\pagebreak
+
+The below graph compares the rankings of individuals based on the two similarity scores (lower similarity score indicates higher flexibility). We can observe that there is a slight difference between the two rankings.  
 
 ```{r echo=FALSE, fig.align="center", fig.height = 8, fig.width = 15}
 
